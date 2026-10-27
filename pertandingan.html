@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pertandingan — PKS Skills</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="js/pks-shared.js"></script>
+</head>
+<body>
+  <div class="app-wrapper" id="app"></div>
+  <div id="loading-spinner"><div class="spinner"></div></div>
+
+  <div class="modal-overlay" id="modal-pertandingan">
+    <div class="modal">
+      <div class="modal-header"><h3 id="modal-tajuk">Tambah Pertandingan Baru</h3><button class="modal-close" id="modal-tutup">&times;</button></div>
+      <div class="modal-body">
+        <input type="hidden" id="pertandingan-id" />
+        <div class="form-grid-2">
+          <div class="form-group" style="grid-column:1/-1;"><label>Nama Pertandingan *</label><input type="text" id="pt-nama" class="form-control" placeholder="cth: PKS Skills 2025" /></div>
+          <div class="form-group"><label>Peringkat *</label>
+            <select id="pt-peringkat" class="form-control">
+              <option value="">-- Pilih Peringkat --</option>
+              <option value="Dalaman">Dalaman (PKS Skills)</option>
+              <option value="Negeri">Negeri (WSM Sarawak)</option>
+              <option value="Kebangsaan">Kebangsaan (PolyCCSkills / WSM Belia)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Lokasi</label><input type="text" id="pt-lokasi" class="form-control" placeholder="cth: Dewan PKS / Kuching" /></div>
+          <div class="form-group"><label>Tarikh Mula *</label><input type="date" id="pt-tarikh-mula" class="form-control" /></div>
+          <div class="form-group"><label>Tarikh Tamat</label><input type="date" id="pt-tarikh-tamat" class="form-control" /></div>
+        </div>
+        <div class="form-group"><label>Catatan</label><textarea id="pt-catatan" class="form-control" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-batal">Batal</button>
+        <button class="btn btn-primary" id="btn-simpan-pt"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-penyertaan">
+    <div class="modal" style="max-width:680px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-users" style="color:var(--pks-biru);margin-right:8px;"></i>Urus Penyertaan — <span id="modal-pt-nama"></span></h3>
+        <button class="modal-close" id="penyertaan-tutup">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header"><h2>Tambah Peserta</h2></div>
+          <div class="card-body">
+            <div class="form-grid-2">
+              <div class="form-group"><label>Pilih Peserta *</label><select id="pn-peserta" class="form-control"><option value="">-- Pilih Peserta --</option></select></div>
+              <div class="form-group"><label>Jurulatih Mengiringi</label><select id="pn-jurulatih" class="form-control"><option value="">-- Pilih Jurulatih --</option></select></div>
+              <div class="form-group"><label>Keputusan / Medal</label>
+                <select id="pn-medal" class="form-control">
+                  <option value="Penyertaan">Penyertaan</option><option value="Gangsa">Gangsa</option>
+                  <option value="Perak">Perak</option><option value="Emas">Emas</option>
+                  <option value="Cemerlang">Cemerlang</option><option value="Naib Johan">Naib Johan</option><option value="Johan">Johan</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Tempat</label><input type="text" id="pn-tempat" class="form-control" placeholder="cth: 1, 2, 3..." /></div>
+            </div>
+            <button class="btn btn-emas" id="btn-tambah-penyertaan"><i class="fa-solid fa-plus"></i> Tambah Penyertaan</button>
+          </div>
+        </div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>Peserta</th><th>Jurulatih</th><th>Keputusan</th><th>Tempat</th><th>Tindakan</th></tr></thead>
+          <tbody id="tbody-penyertaan"><tr><td colspan="5" style="text-align:center;padding:14px;color:var(--pks-teks-muted);">Tiada penyertaan.</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-padam">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header"><h3><i class="fa-solid fa-triangle-exclamation" style="color:var(--pks-danger);margin-right:8px;"></i>Sahkan Padam</h3><button class="modal-close" id="padam-tutup">&times;</button></div>
+      <div class="modal-body"><p>Adakah anda pasti ingin memadam pertandingan <strong id="padam-nama"></strong>?</p></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="padam-batal">Batal</button>
+        <button class="btn btn-danger" id="btn-sahkan-padam"><i class="fa-solid fa-trash"></i> Ya, Padam</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("app").innerHTML =
+      pksLayout("Pengurusan Pertandingan", "pertandingan") +
+      '<div class="page-content">' +
+        '<div class="page-header">' +
+          '<div><h1><i class="fa-solid fa-medal" style="color:var(--pks-biru);margin-right:8px;"></i>Senarai Pertandingan</h1>' +
+          '<p>Rekod semua pertandingan kemahiran merentas semua peringkat</p></div>' +
+          '<button class="btn btn-primary" id="btn-tambah"><i class="fa-solid fa-plus"></i> Tambah Pertandingan</button>' +
+        '</div>' +
+        '<div class="toolbar" style="margin-bottom:16px;">' +
+          '<div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="carian" class="form-control" placeholder="Cari nama pertandingan..." /></div>' +
+          '<select id="tapis-peringkat" class="form-control" style="width:200px;"><option value="">Semua Peringkat</option><option value="Dalaman">Dalaman</option><option value="Negeri">Negeri</option><option value="Kebangsaan">Kebangsaan</option></select>' +
+        '</div>' +
+        '<div id="grid-pt" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;"></div>' +
+      '</div></div>';
+
+    pksInitLayout();
+
+    var padamId = null, aktifPtId = null;
+    var badgePt = { "Dalaman":"badge-dalaman","Negeri":"badge-negeri","Kebangsaan":"badge-kebangsaan" };
+    var ikonPt  = { "Dalaman":"fa-building","Negeri":"fa-flag","Kebangsaan":"fa-star" };
+    var badgeMedal = { "Emas":"badge-emas","Perak":"badge-perak","Gangsa":"badge-gangsa","Johan":"badge-kebangsaan","Naib Johan":"badge-negeri" };
+
+    function renderGrid() {
+      var pt = pksGet("pertandingan");
+      var teks = document.getElementById("carian").value.toLowerCase();
+      var peringkat = document.getElementById("tapis-peringkat").value;
+      var data = pt.filter(function(p){ return p.nama&&p.nama.toLowerCase().indexOf(teks)!==-1&&(!peringkat||p.peringkat===peringkat); });
+      var grid = document.getElementById("grid-pt");
+      if(data.length===0){ grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-medal" style="opacity:.3;font-size:48px;display:block;margin-bottom:12px;"></i><p>Tiada pertandingan direkod.</p></div>'; return; }
+      grid.innerHTML = data.map(function(p){
+        var tMula = p.tarikhMula ? new Date(p.tarikhMula).toLocaleDateString("ms-MY") : "-";
+        var tTamat = p.tarikhTamat ? " — "+new Date(p.tarikhTamat).toLocaleDateString("ms-MY") : "";
+        return '<div class="card">' +
+          '<div class="card-header" style="background:var(--pks-biru-gelap);border-radius:8px 8px 0 0;">' +
+            '<h2 style="color:white;font-size:13px;">'+(p.nama||"-")+'</h2>' +
+            '<span class="badge '+(badgePt[p.peringkat]||"")+'"><i class="fa-solid '+(ikonPt[p.peringkat]||"fa-circle")+'"></i> '+(p.peringkat||"-")+'</span>' +
+          '</div>' +
+          '<div class="card-body" style="padding:12px 14px;">' +
+            '<div style="font-size:12px;color:var(--pks-teks-muted);display:flex;flex-direction:column;gap:5px;">' +
+              '<span><i class="fa-solid fa-calendar" style="color:var(--pks-biru);width:14px;"></i> '+tMula+tTamat+'</span>' +
+              '<span><i class="fa-solid fa-location-dot" style="color:var(--pks-biru);width:14px;"></i> '+(p.lokasi||"Tiada lokasi")+'</span>' +
+              (p.catatan?'<span><i class="fa-solid fa-note-sticky" style="color:var(--pks-biru);width:14px;"></i> '+p.catatan+'</span>':"") +
+            '</div>' +
+            '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">' +
+              '<button class="btn btn-emas btn-sm" onclick="bukaPenyertaan(\''+p.id+'\',\''+p.nama.replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-users"></i> Urus Penyertaan</button>' +
+              '<button class="btn btn-secondary btn-sm" onclick="bukaBorang(\''+p.id+'\')"><i class="fa-solid fa-pen"></i> Edit</button>' +
+              '<button class="btn btn-danger btn-sm" onclick="tunjukPadam(\''+p.id+'\',\''+p.nama.replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-trash"></i></button>' +
+            '</div>' +
+          '</div></div>';
+      }).join("");
+    }
+
+    function bukaBorang(id) {
+      if(id){
+        var p = pksGet("pertandingan").find(function(x){return x.id===id;});
+        document.getElementById("modal-tajuk").textContent="Kemaskini Pertandingan";
+        document.getElementById("pertandingan-id").value=id;
+        document.getElementById("pt-nama").value=p.nama||"";
+        document.getElementById("pt-peringkat").value=p.peringkat||"";
+        document.getElementById("pt-lokasi").value=p.lokasi||"";
+        document.getElementById("pt-catatan").value=p.catatan||"";
+        document.getElementById("pt-tarikh-mula").value=p.tarikhMula||"";
+        document.getElementById("pt-tarikh-tamat").value=p.tarikhTamat||"";
+      } else {
+        document.getElementById("modal-tajuk").textContent="Tambah Pertandingan Baru";
+        document.getElementById("pertandingan-id").value="";
+        ["pt-nama","pt-lokasi","pt-catatan","pt-tarikh-mula","pt-tarikh-tamat"].forEach(function(id){document.getElementById(id).value="";});
+        document.getElementById("pt-peringkat").value="";
+      }
+      document.getElementById("modal-pertandingan").classList.add("active");
+    }
+
+    function bukaPenyertaan(id, nama) {
+      aktifPtId = id;
+      document.getElementById("modal-pt-nama").textContent = nama;
+      var peserta = pksGet("peserta"), jurulatih = pksGet("jurulatih");
+      var selP = document.getElementById("pn-peserta"), selJ = document.getElementById("pn-jurulatih");
+      selP.innerHTML='<option value="">-- Pilih Peserta --</option>';
+      selJ.innerHTML='<option value="">-- Pilih Jurulatih --</option>';
+      peserta.forEach(function(p){selP.innerHTML+='<option value="'+p.id+'">'+p.nama+' ('+(p.noMatrik||"")+')</option>';});
+      jurulatih.forEach(function(j){selJ.innerHTML+='<option value="'+j.id+'">'+j.nama+'</option>';});
+      renderPenyertaan(id);
+      document.getElementById("modal-penyertaan").classList.add("active");
+    }
+
+    function renderPenyertaan(ptId) {
+      var penyertaan = pksGet("penyertaan").filter(function(pn){return pn.pertandinganId===ptId;});
+      var peserta = pksGet("peserta"), jurulatih = pksGet("jurulatih");
+      var tbody = document.getElementById("tbody-penyertaan");
+      if(penyertaan.length===0){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--pks-teks-muted);">Tiada penyertaan lagi.</td></tr>'; return; }
+      tbody.innerHTML = penyertaan.map(function(pn){
+        var p = peserta.find(function(x){return x.id===pn.pesertaId;})||{};
+        var j = jurulatih.find(function(x){return x.id===pn.jurulatihId;})||{};
+        return '<tr><td><strong>'+(p.nama||"-")+'</strong></td><td>'+(j.nama||"-")+'</td>' +
+          '<td><span class="badge '+(badgeMedal[pn.medal]||"badge-aktif")+'">'+(pn.medal||"-")+'</span></td>' +
+          '<td>'+(pn.tempat||"-")+'</td>' +
+          '<td><button class="btn btn-danger btn-sm btn-icon" onclick="padamPenyertaan(\''+pn.id+'\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+      }).join("");
+    }
+
+    function padamPenyertaan(id){ pksSave("penyertaan",pksGet("penyertaan").filter(function(x){return x.id!==id;})); pksToast("Penyertaan dipadam."); renderPenyertaan(aktifPtId); }
+    function tunjukPadam(id,nama){ padamId=id; document.getElementById("padam-nama").textContent=nama; document.getElementById("modal-padam").classList.add("active"); }
+
+    document.getElementById("btn-tambah").addEventListener("click",function(){bukaBorang(null);});
+    document.getElementById("btn-simpan-pt").addEventListener("click",function(){
+      var nama=document.getElementById("pt-nama").value.trim();
+      var peringkat=document.getElementById("pt-peringkat").value;
+      var tarikhMula=document.getElementById("pt-tarikh-mula").value;
+      if(!nama||!peringkat||!tarikhMula){pksToast("Sila lengkapkan nama, peringkat, dan tarikh mula.","error");return;}
+      var senarai=pksGet("pertandingan"), idSedia=document.getElementById("pertandingan-id").value;
+      var data={id:idSedia||pksId(),nama,peringkat,
+        lokasi:document.getElementById("pt-lokasi").value.trim(),
+        catatan:document.getElementById("pt-catatan").value.trim(),
+        tarikhMula,tarikhTamat:document.getElementById("pt-tarikh-tamat").value||"",
+        tarikhCipta:idSedia?(senarai.find(function(x){return x.id===idSedia;})||{}).tarikhCipta||new Date().toISOString():new Date().toISOString()
+      };
+      if(idSedia){pksSave("pertandingan",senarai.map(function(x){return x.id===idSedia?data:x;}));pksToast("Pertandingan berjaya dikemaskini.");}
+      else{pksSave("pertandingan",[...senarai,data]);pksToast("Pertandingan baru berjaya ditambah.");}
+      document.getElementById("modal-pertandingan").classList.remove("active"); renderGrid();
+    });
+    document.getElementById("btn-tambah-penyertaan").addEventListener("click",function(){
+      var pesertaId=document.getElementById("pn-peserta").value;
+      if(!pesertaId){pksToast("Sila pilih peserta.","error");return;}
+      pksSave("penyertaan",[...pksGet("penyertaan"),{id:pksId(),pertandinganId:aktifPtId,pesertaId,
+        jurulatihId:document.getElementById("pn-jurulatih").value||null,
+        medal:document.getElementById("pn-medal").value,
+        tempat:document.getElementById("pn-tempat").value.trim(),
+        tarikhCipta:new Date().toISOString()
+      }]);
+      document.getElementById("pn-peserta").value=""; document.getElementById("pn-tempat").value="";
+      pksToast("Penyertaan berjaya ditambah."); renderPenyertaan(aktifPtId);
+    });
+    document.getElementById("btn-sahkan-padam").addEventListener("click",function(){
+      if(!padamId)return;
+      pksSave("pertandingan",pksGet("pertandingan").filter(function(x){return x.id!==padamId;}));
+      pksSave("penyertaan",pksGet("penyertaan").filter(function(x){return x.pertandinganId!==padamId;}));
+      document.getElementById("modal-padam").classList.remove("active");
+      pksToast("Pertandingan berjaya dipadam."); padamId=null; renderGrid();
+    });
+    ["modal-tutup","modal-batal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(){document.getElementById("modal-pertandingan").classList.remove("active");});});
+    document.getElementById("penyertaan-tutup").addEventListener("click",function(){document.getElementById("modal-penyertaan").classList.remove("active");});
+    ["padam-tutup","padam-batal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(){document.getElementById("modal-padam").classList.remove("active");padamId=null;});});
+    ["carian","tapis-peringkat"].forEach(function(id){document.getElementById(id).addEventListener("input",renderGrid);});
+
+    renderGrid();
+  </script>
+</body>
+</html>
