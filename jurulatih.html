@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jurulatih — PKS Skills</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="js/pks-shared.js"></script>
+</head>
+<body>
+  <div class="app-wrapper" id="app"></div>
+  <div id="loading-spinner"><div class="spinner"></div></div>
+
+  <div class="modal-overlay" id="modal-jurulatih">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-tajuk">Tambah Jurulatih Baru</h3>
+        <button class="modal-close" id="modal-tutup">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="jurulatih-id" />
+        <div class="form-grid-2">
+          <div class="form-group"><label>Nama Penuh *</label><input type="text" id="j-nama" class="form-control" placeholder="Nama penuh jurulatih" /></div>
+          <div class="form-group"><label>Jabatan *</label><input type="text" id="j-jabatan" class="form-control" placeholder="cth: Jabatan Kejuruteraan Mekanikal" /></div>
+          <div class="form-group"><label>Bidang Kepakaran *</label><input type="text" id="j-bidang" class="form-control" placeholder="cth: CNC / Mechanical CAD" /></div>
+          <div class="form-group"><label>E-mel</label><input type="email" id="j-email" class="form-control" placeholder="email@pks.edu.my" /></div>
+          <div class="form-group"><label>No. Telefon</label><input type="tel" id="j-tel" class="form-control" placeholder="cth: 082-123456" /></div>
+          <div class="form-group"><label>Status</label>
+            <select id="j-status" class="form-control"><option value="Aktif">Aktif</option><option value="Tidak Aktif">Tidak Aktif</option></select>
+          </div>
+        </div>
+        <div class="form-group"><label>Catatan</label><textarea id="j-catatan" class="form-control" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="modal-batal">Batal</button>
+        <button class="btn btn-primary" id="btn-simpan"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modal-padam">
+    <div class="modal" style="max-width:420px;">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-triangle-exclamation" style="color:var(--pks-danger);margin-right:8px;"></i>Sahkan Padam</h3>
+        <button class="modal-close" id="padam-tutup">&times;</button>
+      </div>
+      <div class="modal-body"><p>Adakah anda pasti ingin memadam rekod jurulatih <strong id="padam-nama"></strong>?</p></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="padam-batal">Batal</button>
+        <button class="btn btn-danger" id="btn-sahkan-padam"><i class="fa-solid fa-trash"></i> Ya, Padam</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("app").innerHTML =
+      pksLayout("Pengurusan Jurulatih", "jurulatih") +
+      '<div class="page-content">' +
+        '<div class="page-header">' +
+          '<div><h1><i class="fa-solid fa-chalkboard-user" style="color:var(--pks-biru);margin-right:8px;"></i>Senarai Jurulatih</h1>' +
+          '<p>Urus rekod jurulatih bidang kemahiran PKS</p></div>' +
+          '<button class="btn btn-primary" id="btn-tambah"><i class="fa-solid fa-plus"></i> Tambah Jurulatih</button>' +
+        '</div>' +
+        '<div class="card"><div class="card-body">' +
+          '<div class="toolbar">' +
+            '<div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="carian" class="form-control" placeholder="Cari nama jurulatih..." /></div>' +
+            '<select id="tapis-status" class="form-control" style="width:160px;"><option value="">Semua Status</option><option value="Aktif">Aktif</option><option value="Tidak Aktif">Tidak Aktif</option></select>' +
+          '</div>' +
+          '<div class="table-wrapper"><table>' +
+            '<thead><tr><th>#</th><th>Nama Jurulatih</th><th>Jabatan</th><th>Bidang Kepakaran</th><th>E-mel</th><th>Bil. Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>' +
+            '<tbody id="tbody-jurulatih"></tbody>' +
+          '</table></div>' +
+        '</div></div>' +
+      '</div></div>';
+
+    pksInitLayout();
+
+    var padamId = null;
+
+    function renderJadual() {
+      var jurulatih = pksGet("jurulatih"), peserta = pksGet("peserta");
+      var teks = document.getElementById("carian").value.toLowerCase();
+      var status = document.getElementById("tapis-status").value;
+      var data = jurulatih.filter(function(j){ return j.nama&&j.nama.toLowerCase().indexOf(teks)!==-1 && (!status||j.status===status); });
+      var tbody = document.getElementById("tbody-jurulatih");
+      if(data.length===0){ tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-user-slash"></i><p>Tiada rekod jurulatih.</p></div></td></tr>'; return; }
+      tbody.innerHTML = data.map(function(j,i){
+        var bil = peserta.filter(function(p){ return p.jurulatihId===j.id; }).length;
+        return '<tr><td>'+(i+1)+'</td><td><strong>'+(j.nama||"-")+'</strong></td>' +
+          '<td>'+(j.jabatan||"-")+'</td><td>'+(j.bidangKepakaran||"-")+'</td>' +
+          '<td>'+(j.email?'<a href="mailto:'+j.email+'" style="color:var(--pks-biru);">'+j.email+'</a>':"-")+'</td>' +
+          '<td><strong style="color:var(--pks-biru-gelap);font-size:16px;">'+bil+'</strong></td>' +
+          '<td><span class="badge '+(j.status==="Aktif"?"badge-aktif":"badge-alumni")+'">'+(j.status||"-")+'</span></td>' +
+          '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="bukaBorang(\''+j.id+'\')"><i class="fa-solid fa-pen"></i></button> ' +
+          '<button class="btn btn-danger btn-sm btn-icon" onclick="tunjukPadam(\''+j.id+'\',\''+j.nama.replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-trash"></i></button></td>' +
+          '</tr>';
+      }).join("");
+    }
+
+    function bukaBorang(id) {
+      if(id){
+        var j = pksGet("jurulatih").find(function(x){return x.id===id;});
+        document.getElementById("modal-tajuk").textContent="Kemaskini Rekod Jurulatih";
+        document.getElementById("jurulatih-id").value=id;
+        document.getElementById("j-nama").value=j.nama||"";
+        document.getElementById("j-jabatan").value=j.jabatan||"";
+        document.getElementById("j-bidang").value=j.bidangKepakaran||"";
+        document.getElementById("j-email").value=j.email||"";
+        document.getElementById("j-tel").value=j.noTel||"";
+        document.getElementById("j-status").value=j.status||"Aktif";
+        document.getElementById("j-catatan").value=j.catatan||"";
+      } else {
+        document.getElementById("modal-tajuk").textContent="Tambah Jurulatih Baru";
+        document.getElementById("jurulatih-id").value="";
+        ["j-nama","j-jabatan","j-bidang","j-email","j-tel","j-catatan"].forEach(function(id){document.getElementById(id).value="";});
+        document.getElementById("j-status").value="Aktif";
+      }
+      document.getElementById("modal-jurulatih").classList.add("active");
+    }
+
+    function tunjukPadam(id,nama){ padamId=id; document.getElementById("padam-nama").textContent=nama; document.getElementById("modal-padam").classList.add("active"); }
+
+    document.getElementById("btn-tambah").addEventListener("click",function(){bukaBorang(null);});
+    document.getElementById("btn-simpan").addEventListener("click",function(){
+      var nama=document.getElementById("j-nama").value.trim();
+      var jabatan=document.getElementById("j-jabatan").value.trim();
+      var bidangKepakaran=document.getElementById("j-bidang").value.trim();
+      if(!nama||!jabatan||!bidangKepakaran){pksToast("Sila lengkapkan semua medan bertanda *.","error");return;}
+      var senarai=pksGet("jurulatih"), idSedia=document.getElementById("jurulatih-id").value;
+      var data={id:idSedia||pksId(),nama,jabatan,bidangKepakaran,
+        email:document.getElementById("j-email").value.trim(),
+        noTel:document.getElementById("j-tel").value.trim(),
+        status:document.getElementById("j-status").value,
+        catatan:document.getElementById("j-catatan").value.trim()
+      };
+      if(idSedia){pksSave("jurulatih",senarai.map(function(x){return x.id===idSedia?data:x;}));pksToast("Rekod jurulatih berjaya dikemaskini.");}
+      else{pksSave("jurulatih",[...senarai,data]);pksToast("Jurulatih baru berjaya didaftarkan.");}
+      document.getElementById("modal-jurulatih").classList.remove("active");
+      renderJadual();
+    });
+    document.getElementById("btn-sahkan-padam").addEventListener("click",function(){
+      if(!padamId)return;
+      pksSave("jurulatih",pksGet("jurulatih").filter(function(x){return x.id!==padamId;}));
+      document.getElementById("modal-padam").classList.remove("active");
+      pksToast("Rekod jurulatih berjaya dipadam."); padamId=null; renderJadual();
+    });
+    ["modal-tutup","modal-batal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(){document.getElementById("modal-jurulatih").classList.remove("active");});});
+    ["padam-tutup","padam-batal"].forEach(function(id){document.getElementById(id).addEventListener("click",function(){document.getElementById("modal-padam").classList.remove("active");padamId=null;});});
+    ["carian","tapis-status"].forEach(function(id){document.getElementById(id).addEventListener("input",renderJadual);});
+
+    renderJadual();
+  </script>
+</body>
+</html>

@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PKS Skills Dashboard — Politeknik Kuching Sarawak</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --pks-biru-gelap:#003087; --pks-biru:#0057B8; --pks-biru-cerah:#1976D2;
+      --pks-emas:#FFB81C; --pks-emas-gelap:#E6A000; --pks-putih:#FFFFFF;
+      --pks-bg:#F0F4FA; --pks-surface:#FFFFFF; --pks-border:#D0DCF0;
+      --pks-teks:#1A2340; --pks-teks-muted:#5A6A8A;
+      --pks-success:#28A745; --pks-danger:#DC3545; --pks-warning:#FFC107; --pks-info:#17A2B8;
+      --sidebar-lebar:240px; --navbar-tinggi:64px;
+      --radius:8px; --shadow:0 2px 8px rgba(0,48,135,0.10); --shadow-lg:0 4px 20px rgba(0,48,135,0.15);
+      --transition:0.2s ease;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; font-size:14px; line-height:1.6; color:var(--pks-teks); background:var(--pks-bg); }
+    a { text-decoration:none; color:inherit; }
+    ul { list-style:none; }
+    img { max-width:100%; }
+
+    /* Layout */
+    .app-wrapper { display:flex; min-height:100vh; }
+    .sidebar { width:var(--sidebar-lebar); background:var(--pks-biru-gelap); color:var(--pks-putih); display:flex; flex-direction:column; position:fixed; top:0; left:0; height:100vh; z-index:100; transition:transform var(--transition); }
+    .sidebar-logo { display:flex; align-items:center; gap:10px; padding:20px 16px; border-bottom:1px solid rgba(255,255,255,0.12); }
+    .sidebar-logo-teks { display:flex; flex-direction:column; }
+    .sidebar-logo-teks span:first-child { font-size:13px; font-weight:700; color:var(--pks-emas); line-height:1.2; }
+    .sidebar-logo-teks span:last-child { font-size:10px; color:rgba(255,255,255,0.65); line-height:1.2; }
+    .sidebar-nav { flex:1; padding:12px 0; overflow-y:auto; }
+    .sidebar-nav a { display:flex; align-items:center; gap:12px; padding:11px 20px; color:rgba(255,255,255,0.78); font-size:13.5px; font-weight:500; border-left:3px solid transparent; transition:all var(--transition); cursor:pointer; }
+    .sidebar-nav a:hover { background:rgba(255,255,255,0.08); color:var(--pks-putih); }
+    .sidebar-nav a.active { background:rgba(255,184,28,0.15); color:var(--pks-emas); border-left-color:var(--pks-emas); }
+    .sidebar-nav a i { width:18px; text-align:center; font-size:15px; }
+    .sidebar-footer { padding:14px 16px; border-top:1px solid rgba(255,255,255,0.10); font-size:12px; color:rgba(255,255,255,0.45); text-align:center; }
+    .main-content { margin-left:var(--sidebar-lebar); flex:1; display:flex; flex-direction:column; min-height:100vh; }
+    .navbar-top { height:var(--navbar-tinggi); background:var(--pks-surface); border-bottom:1px solid var(--pks-border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; position:sticky; top:0; z-index:90; box-shadow:0 1px 4px rgba(0,48,135,0.06); }
+    .navbar-tajuk { font-size:16px; font-weight:700; color:var(--pks-biru-gelap); }
+    .navbar-kanan { display:flex; align-items:center; gap:16px; }
+    .hamburger { display:none; background:none; border:none; font-size:20px; cursor:pointer; color:var(--pks-biru-gelap); padding:4px; }
+    .page-content { padding:24px; flex:1; }
+    .page { display:none; }
+    .page.aktif { display:block; }
+    .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:24px; }
+    .page-header h1 { font-size:20px; font-weight:700; color:var(--pks-biru-gelap); }
+    .page-header p { font-size:13px; color:var(--pks-teks-muted); margin-top:2px; }
+
+    /* Stats */
+    .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+    .stat-card { background:var(--pks-surface); border:1px solid var(--pks-border); border-radius:var(--radius); padding:20px; display:flex; align-items:center; gap:16px; box-shadow:var(--shadow); transition:box-shadow var(--transition); }
+    .stat-card:hover { box-shadow:var(--shadow-lg); }
+    .stat-icon { width:52px; height:52px; border-radius:var(--radius); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .stat-icon.biru { background:#EBF2FF; color:var(--pks-biru); }
+    .stat-icon.emas { background:#FFF8E6; color:var(--pks-emas-gelap); }
+    .stat-icon.hijau { background:#EAFAF1; color:var(--pks-success); }
+    .stat-icon.merah { background:#FDECEA; color:var(--pks-danger); }
+    .stat-icon.cyan { background:#E8F8FA; color:var(--pks-info); }
+    .stat-label { font-size:12px; color:var(--pks-teks-muted); font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
+    .stat-nilai { font-size:28px; font-weight:800; color:var(--pks-biru-gelap); line-height:1.2; }
+
+    /* Card */
+    .card { background:var(--pks-surface); border:1px solid var(--pks-border); border-radius:var(--radius); box-shadow:var(--shadow); }
+    .card-header { padding:16px 20px; border-bottom:1px solid var(--pks-border); display:flex; align-items:center; justify-content:space-between; }
+    .card-header h2 { font-size:15px; font-weight:700; color:var(--pks-biru-gelap); }
+    .card-body { padding:20px; }
+
+    /* Btn */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--radius); font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all var(--transition); white-space:nowrap; }
+    .btn-primary { background:var(--pks-biru-gelap); color:white; }
+    .btn-primary:hover { background:var(--pks-biru); }
+    .btn-emas { background:var(--pks-emas); color:var(--pks-biru-gelap); }
+    .btn-emas:hover { background:var(--pks-emas-gelap); }
+    .btn-danger { background:var(--pks-danger); color:white; }
+    .btn-danger:hover { opacity:0.9; }
+    .btn-secondary { background:var(--pks-bg); color:var(--pks-teks); border:1px solid var(--pks-border); }
+    .btn-secondary:hover { background:var(--pks-border); }
+    .btn-sm { padding:5px 10px; font-size:12px; }
+    .btn-icon { padding:6px 8px; }
+
+    /* Table */
+    .table-wrapper { overflow-x:auto; border-radius:var(--radius); }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    thead th { background:var(--pks-biru-gelap); color:var(--pks-putih); padding:11px 14px; text-align:left; font-weight:600; font-size:12px; letter-spacing:0.3px; white-space:nowrap; }
+    tbody tr { border-bottom:1px solid var(--pks-border); }
+    tbody tr:hover { background:#F5F8FF; }
+    tbody td { padding:11px 14px; color:var(--pks-teks); vertical-align:middle; }
+    tbody td:last-child { white-space:nowrap; }
+
+    /* Badge */
+    .badge { display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; }
+    .badge-aktif { background:#EAFAF1; color:#1a7a3d; }
+    .badge-alumni { background:#F0F0F0; color:#555; }
+    .badge-dalaman { background:#EBF2FF; color:var(--pks-biru-gelap); }
+    .badge-negeri { background:#FFF8E6; color:var(--pks-emas-gelap); }
+    .badge-kebangsaan { background:#FDECEA; color:var(--pks-danger); }
+    .badge-emas { background:#FFF3CD; color:#856404; }
+    .badge-perak { background:#F0F0F0; color:#444; }
+    .badge-gangsa { background:#FBE9E0; color:#8B4513; }
+
+    /* Form */
+    .form-group { margin-bottom:16px; }
+    .form-group label { display:block; font-size:12px; font-weight:600; color:var(--pks-teks); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.4px; }
+    .form-control { width:100%; padding:9px 12px; border:1px solid var(--pks-border); border-radius:var(--radius); font-size:13px; color:var(--pks-teks); background:var(--pks-putih); transition:border-color var(--transition); font-family:inherit; }
+    .form-control:focus { outline:none; border-color:var(--pks-biru); box-shadow:0 0 0 3px rgba(0,87,184,0.12); }
+    .form-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+
+    /* Toolbar */
+    .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:16px; }
+    .search-box { position:relative; flex:1; min-width:200px; }
+    .search-box i { position:absolute; left:11px; top:50%; transform:translateY(-50%); color:var(--pks-teks-muted); font-size:13px; }
+    .search-box input { padding-left:34px; width:100%; }
+
+    /* Modal */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:200; align-items:center; justify-content:center; padding:20px; }
+    .modal-overlay.active { display:flex; }
+    .modal { background:var(--pks-surface); border-radius:10px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:var(--shadow-lg); animation:modalIn 0.2s ease; }
+    @keyframes modalIn { from{opacity:0;transform:scale(0.95) translateY(-10px);} to{opacity:1;transform:scale(1) translateY(0);} }
+    .modal-header { padding:18px 20px; border-bottom:1px solid var(--pks-border); display:flex; align-items:center; justify-content:space-between; }
+    .modal-header h3 { font-size:16px; font-weight:700; color:var(--pks-biru-gelap); }
+    .modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--pks-teks-muted); line-height:1; padding:2px; }
+    .modal-close:hover { color:var(--pks-danger); }
+    .modal-body { padding:20px; }
+    .modal-footer { padding:14px 20px; border-top:1px solid var(--pks-border); display:flex; justify-content:flex-end; gap:10px; }
+
+    /* Toast */
+    .toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:var(--radius); font-size:13px; font-weight:600; color:white; z-index:999; transform:translateY(20px); opacity:0; transition:all 0.3s ease; box-shadow:var(--shadow-lg); }
+    .toast.show { transform:translateY(0); opacity:1; }
+    .toast-success { background:var(--pks-success); }
+    .toast-error { background:var(--pks-danger); }
+    .toast-info { background:var(--pks-biru); }
+
+    /* Empty */
+    .empty-state { text-align:center; padding:48px 20px; color:var(--pks-teks-muted); }
+    .empty-state i { font-size:48px; margin-bottom:12px; display:block; opacity:0.4; }
+    .empty-state p { font-size:14px; }
+
+    /* Chart */
+    .chart-wrapper { position:relative; height:280px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+    .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+
+    /* Pagination */
+    .pagination { display:flex; align-items:center; justify-content:space-between; padding:12px 0 4px; font-size:12px; color:var(--pks-teks-muted); }
+    .pagination-btns { display:flex; gap:6px; }
+    .pagination-btns button { padding:5px 10px; border:1px solid var(--pks-border); background:var(--pks-putih); border-radius:4px; cursor:pointer; font-size:12px; transition:all var(--transition); }
+    .pagination-btns button:hover, .pagination-btns button.active { background:var(--pks-biru-gelap); color:white; border-color:var(--pks-biru-gelap); }
+    .pagination-btns button:disabled { opacity:0.4; cursor:not-allowed; }
+
+    /* Sidebar overlay */
+    .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:99; }
+
+    /* Print */
+    @media print {
+      .sidebar,.navbar-top,.toolbar,.page-header .btn,.pagination,.btn { display:none !important; }
+      .main-content { margin-left:0 !important; }
+      .card { box-shadow:none !important; border:1px solid #ccc !important; }
+      .print-header { display:block !important; }
+    }
+    .print-header { display:none; text-align:center; margin-bottom:20px; padding-bottom:16px; border-bottom:2px solid #003087; }
+    .print-header h2 { color:#003087; font-size:18px; }
+    .print-header p { color:#666; font-size:13px; }
+
+    /* Responsive */
+    @media (max-width:768px) {
+      .sidebar { transform:translateX(-100%); }
+      .sidebar.open { transform:translateX(0); }
+      .sidebar-overlay.active { display:block; }
+      .main-content { margin-left:0; }
+      .hamburger { display:block; }
+      .grid-2, .grid-3 { grid-template-columns:1fr; }
+      .form-grid-2 { grid-template-columns:1fr; }
+      .page-content { padding:16px; }
+      .stats-grid { grid-template-columns:1fr 1fr; }
+    }
+    @media (max-width:480px) {
+      .stats-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ======================================================== SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+<!-- ======================================================== SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div style="width:36px;height:36px;background:var(--pks-emas);border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <i class="fa-solid fa-trophy" style="color:var(--pks-biru-gelap);font-size:16px;"></i>
+    </div>
+    <div class="sidebar-logo-teks"><span>PKS Skills</span><span>Dashboard</span></div>
+  </div>
+  <nav class="sidebar-nav" id="sidebar-nav">
+    <a onclick="tukarHalaman('dashboard')" id="nav-dashboard" class="active">
+      <i class="fa-solid fa-gauge-high"></i> Dashboard
+    </a>
+    <a onclick="tukarHalaman('peserta')" id="nav-peserta">
+      <i class="fa-solid fa-users"></i> Peserta
+    </a>
+    <a onclick="tukarHalaman('jurulatih')" id="nav-jurulatih">
+      <i class="fa-solid fa-chalkboard-user"></i> Jurulatih
+    </a>
+    <a onclick="tukarHalaman('pertandingan')" id="nav-pertandingan">
+      <i class="fa-solid fa-medal"></i> Pertandingan
+    </a>
+    <a onclick="tukarHalaman('laporan')" id="nav-laporan">
+      <i class="fa-solid fa-chart-bar"></i> Laporan
+    </a>
+  </nav>
+  <div class="sidebar-footer" id="sidebar-footer-tahun"></div>
+</aside>
+
+<!-- ======================================================== MAIN CONTENT -->
+<div class="main-content">
+  <header class="navbar-top">
+    <div style="display:flex;align-items:center;gap:14px;">
+      <button class="hamburger" id="hamburger-btn"><i class="fa-solid fa-bars"></i></button>
+      <span class="navbar-tajuk" id="navbar-tajuk">Dashboard Utama</span>
+    </div>
+    <div class="navbar-kanan">
+      <span style="font-size:12px;color:var(--pks-teks-muted);">
+        <i class="fa-solid fa-building-columns" style="color:var(--pks-biru);margin-right:5px;"></i>Politeknik Kuching Sarawak
+      </span>
+    </div>
+  </header>
+
+  <div class="page-content">
+
+    <!-- ================================================ HALAMAN: DASHBOARD -->
+    <div class="page aktif" id="page-dashboard">
+      <div style="margin-bottom:20px;">
+        <h1 style="font-size:18px;color:var(--pks-biru-gelap);">Selamat Datang, Rizal &#x1F44B;</h1>
+        <p style="color:var(--pks-teks-muted);font-size:13px;">Paparan ringkasan program kemahiran Politeknik Kuching Sarawak</p>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon biru"><i class="fa-solid fa-users"></i></div><div class="stat-info"><div class="stat-label">Peserta Aktif</div><div class="stat-nilai" id="stat-peserta">-</div></div></div>
+        <div class="stat-card"><div class="stat-icon emas"><i class="fa-solid fa-chalkboard-user"></i></div><div class="stat-info"><div class="stat-label">Jurulatih</div><div class="stat-nilai" id="stat-jurulatih">-</div></div></div>
+        <div class="stat-card"><div class="stat-icon hijau"><i class="fa-solid fa-medal"></i></div><div class="stat-info"><div class="stat-label">Pertandingan</div><div class="stat-nilai" id="stat-pertandingan">-</div></div></div>
+        <div class="stat-card"><div class="stat-icon emas"><i class="fa-solid fa-trophy"></i></div><div class="stat-info"><div class="stat-label">Jumlah Medal</div><div class="stat-nilai" id="stat-medal">-</div></div></div>
+        <div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-flag"></i></div><div class="stat-info"><div class="stat-label">Penyertaan</div><div class="stat-nilai" id="stat-penyertaan">-</div></div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="card"><div class="card-header"><h2><i class="fa-solid fa-chart-bar" style="color:var(--pks-biru);margin-right:8px;"></i>Penyertaan Mengikut Bidang</h2></div><div class="card-body"><div class="chart-wrapper"><canvas id="carta-bidang"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><h2><i class="fa-solid fa-chart-pie" style="color:var(--pks-emas-gelap);margin-right:8px;"></i>Penyertaan Mengikut Peringkat</h2></div><div class="card-body"><div class="chart-wrapper"><canvas id="carta-pencapaian"></canvas></div></div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="card"><div class="card-header"><h2><i class="fa-solid fa-chart-column" style="color:var(--pks-biru);margin-right:8px;"></i>Medal Mengikut Jenis</h2></div><div class="card-body"><div class="chart-wrapper"><canvas id="carta-medal"></canvas></div></div></div>
+        <div class="card"><div class="card-header"><h2><i class="fa-solid fa-calendar-days" style="color:var(--pks-success);margin-right:8px;"></i>Pertandingan Akan Datang</h2></div><div class="card-body" style="padding:12px 16px;"><div id="senarai-akan-datang"></div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <h2><i class="fa-solid fa-star" style="color:var(--pks-emas-gelap);margin-right:8px;"></i>Pencapaian Terbaru</h2>
+          <button class="btn btn-secondary btn-sm" onclick="tukarHalaman('laporan')">Lihat Semua <i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+        <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+          <thead><tr><th>Peserta</th><th>Pertandingan</th><th>Peringkat</th><th>Keputusan</th><th>Jurulatih</th></tr></thead>
+          <tbody id="tbody-terbaru"></tbody>
+        </table></div></div>
+      </div>
+    </div><!-- /page-dashboard -->
+
+    <!-- ================================================ HALAMAN: PESERTA -->
+    <div class="page" id="page-peserta">
+      <div class="page-header">
+        <div><h1><i class="fa-solid fa-users" style="color:var(--pks-biru);margin-right:8px;"></i>Senarai Peserta</h1>
+        <p>Urus rekod peserta pertandingan kemahiran PKS</p></div>
+        <button class="btn btn-primary" onclick="bukaBosangPeserta(null)"><i class="fa-solid fa-plus"></i> Tambah Peserta</button>
+      </div>
+      <div class="card"><div class="card-body">
+        <div class="toolbar">
+          <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="carian-peserta" class="form-control" placeholder="Cari nama atau no. matrik..." oninput="renderPeserta()" /></div>
+          <select id="tapis-status-peserta" class="form-control" style="width:160px;" onchange="renderPeserta()"><option value="">Semua Status</option><option value="Aktif">Aktif</option><option value="Alumni">Alumni</option><option value="Tidak Aktif">Tidak Aktif</option></select>
+          <select id="tapis-bidang-peserta" class="form-control" style="width:200px;" onchange="renderPeserta()"><option value="">Semua Bidang</option></select>
+        </div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>#</th><th>Nama Peserta</th><th>No. Matrik</th><th>Program</th><th>Bidang Kemahiran</th><th>Jurulatih</th><th>Status</th><th>Tindakan</th></tr></thead>
+          <tbody id="tbody-peserta"></tbody>
+        </table></div>
+        <div class="pagination"><span id="info-pag-peserta">-</span><div class="pagination-btns" id="pag-btns-peserta"></div></div>
+      </div></div>
+    </div><!-- /page-peserta -->
+
+    <!-- ================================================ HALAMAN: JURULATIH -->
+    <div class="page" id="page-jurulatih">
+      <div class="page-header">
+        <div><h1><i class="fa-solid fa-chalkboard-user" style="color:var(--pks-biru);margin-right:8px;"></i>Senarai Jurulatih</h1>
+        <p>Urus rekod jurulatih bidang kemahiran PKS</p></div>
+        <button class="btn btn-primary" onclick="bukaBorangJurulatih(null)"><i class="fa-solid fa-plus"></i> Tambah Jurulatih</button>
+      </div>
+      <div class="card"><div class="card-body">
+        <div class="toolbar">
+          <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="carian-jurulatih" class="form-control" placeholder="Cari nama jurulatih..." oninput="renderJurulatih()" /></div>
+          <select id="tapis-status-jurulatih" class="form-control" style="width:160px;" onchange="renderJurulatih()"><option value="">Semua Status</option><option value="Aktif">Aktif</option><option value="Tidak Aktif">Tidak Aktif</option></select>
+        </div>
+        <div class="table-wrapper"><table>
+          <thead><tr><th>#</th><th>Nama Jurulatih</th><th>Jabatan</th><th>Bidang Kepakaran</th><th>E-mel</th><th>Bil. Peserta</th><th>Status</th><th>Tindakan</th></tr></thead>
+          <tbody id="tbody-jurulatih"></tbody>
+        </table></div>
+      </div></div>
+    </div><!-- /page-jurulatih -->
+
+    <!-- ================================================ HALAMAN: PERTANDINGAN -->
+    <div class="page" id="page-pertandingan">
+      <div class="page-header">
+        <div><h1><i class="fa-solid fa-medal" style="color:var(--pks-biru);margin-right:8px;"></i>Senarai Pertandingan</h1>
+        <p>Rekod semua pertandingan kemahiran merentas semua peringkat</p></div>
+        <button class="btn btn-primary" onclick="bukaBorangPt(null)"><i class="fa-solid fa-plus"></i> Tambah Pertandingan</button>
+      </div>
+      <div class="toolbar" style="margin-bottom:16px;">
+        <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="carian-pt" class="form-control" placeholder="Cari nama pertandingan..." oninput="renderGrid()" /></div>
+        <select id="tapis-peringkat-pt" class="form-control" style="width:200px;" onchange="renderGrid()"><option value="">Semua Peringkat</option><option value="Dalaman">Dalaman</option><option value="Negeri">Negeri</option><option value="Kebangsaan">Kebangsaan</option></select>
+      </div>
+      <div id="grid-pt" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;"></div>
+    </div><!-- /page-pertandingan -->
+
+    <!-- ================================================ HALAMAN: LAPORAN -->
+    <div class="page" id="page-laporan">
+      <div class="print-header"><h2>Laporan Pertandingan Kemahiran</h2><p id="print-tarikh"></p></div>
+      <div class="page-header">
+        <div><h1><i class="fa-solid fa-chart-bar" style="color:var(--pks-biru);margin-right:8px;"></i>Laporan Penyertaan &amp; Pencapaian</h1>
+        <p>Rekod lengkap semua penyertaan merentas semua peringkat pertandingan</p></div>
+        <button class="btn btn-emas" onclick="window.print()"><i class="fa-solid fa-print"></i> Cetak / Simpan PDF</button>
+      </div>
+      <div class="card" style="margin-bottom:16px;"><div class="card-body" style="padding:14px 20px;">
+        <div class="toolbar" style="margin:0;">
+          <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="carian-lap" class="form-control" placeholder="Cari nama peserta atau no. matrik..." oninput="renderLaporan()" /></div>
+          <select id="tapis-peringkat-lap" class="form-control" style="width:190px;" onchange="renderLaporan()"><option value="">Semua Peringkat</option><option value="Dalaman">Dalaman</option><option value="Negeri">Negeri</option><option value="Kebangsaan">Kebangsaan</option></select>
+          <select id="tapis-pt-lap" class="form-control" style="width:240px;" onchange="renderLaporan()"><option value="">Semua Pertandingan</option></select>
+          <select id="tapis-medal-lap" class="form-control" style="width:160px;" onchange="renderLaporan()"><option value="">Semua Keputusan</option><option value="Emas">Emas</option><option value="Perak">Perak</option><option value="Gangsa">Gangsa</option><option value="Johan">Johan</option><option value="Naib Johan">Naib Johan</option><option value="Cemerlang">Cemerlang</option><option value="Penyertaan">Penyertaan</option></select>
+        </div>
+      </div></div>
+      <div class="stats-grid" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-icon biru"><i class="fa-solid fa-list-check"></i></div><div class="stat-info"><div class="stat-label">Jumlah Penyertaan</div><div class="stat-nilai" id="rkad-penyertaan">-</div></div></div>
+        <div class="stat-card"><div class="stat-icon emas"><i class="fa-solid fa-medal"></i></div><div class="stat-info"><div class="stat-label">Emas</div><div class="stat-nilai" id="rkad-emas" style="color:#DAA520;">-</div></div></div>
+        <div class="stat-card"><div style="width:46px;height:46px;border-radius:8px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🥈</div><div class="stat-info"><div class="stat-label">Perak</div><div class="stat-nilai" id="rkad-perak" style="color:#888;">-</div></div></div>
+        <div class="stat-card"><div style="width:46px;height:46px;border-radius:8px;background:#FBE9E0;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🥉</div><div class="stat-info"><div class="stat-label">Gangsa</div><div class="stat-nilai" id="rkad-gangsa" style="color:#8B4513;">-</div></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h2><i class="fa-solid fa-table" style="color:var(--pks-biru);margin-right:8px;"></i>Rekod Penyertaan Lengkap</h2><span id="info-rekod-lap" style="font-size:12px;color:var(--pks-teks-muted);"></span></div>
+        <div class="card-body" style="padding:0;"><div class="table-wrapper"><table>
+          <thead><tr><th>#</th><th>Peserta</th><th>No. Matrik</th><th>Bidang Kemahiran</th><th>Pertandingan</th><th>Peringkat</th><th>Keputusan</th><th>Tempat</th><th>Jurulatih</th></tr></thead>
+          <tbody id="tbody-laporan"></tbody>
+        </table></div>
+        <div class="pagination" style="padding:12px 16px;"><span id="info-pag-lap">-</span><div class="pagination-btns" id="pag-btns-lap"></div></div>
+        </div>
+      </div>
+    </div><!-- /page-laporan -->
+
+  </div><!-- /page-content -->
+</div><!-- /main-content -->
+
+<!-- ======================================================== MODAL: PESERTA -->
+<div class="modal-overlay" id="modal-peserta">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-tajuk-peserta">Tambah Peserta Baru</h3><button class="modal-close" onclick="tutupModal('modal-peserta')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="peserta-id" />
+      <div class="form-grid-2">
+        <div class="form-group"><label>Nama Penuh *</label><input type="text" id="p-nama" class="form-control" placeholder="Nama penuh peserta" /></div>
+        <div class="form-group"><label>No. Matrik *</label><input type="text" id="p-matrik" class="form-control" placeholder="cth: PKS2301234" /></div>
+        <div class="form-group"><label>Program / Kursus *</label><input type="text" id="p-program" class="form-control" placeholder="cth: Diploma Kejuruteraan Mekanikal" /></div>
+        <div class="form-group"><label>Jabatan *</label><input type="text" id="p-jabatan" class="form-control" placeholder="cth: Jabatan Kejuruteraan Mekanikal" /></div>
+        <div class="form-group"><label>Tahun Pengajian</label><select id="p-tahun" class="form-control"><option value="">-- Pilih --</option><option value="1">Tahun 1</option><option value="2">Tahun 2</option><option value="3">Tahun 3</option></select></div>
+        <div class="form-group"><label>No. Telefon</label><input type="tel" id="p-tel" class="form-control" placeholder="cth: 011-12345678" /></div>
+        <div class="form-group"><label>Bidang Kemahiran *</label><input type="text" id="p-bidang" class="form-control" placeholder="cth: CNC Turning" /></div>
+        <div class="form-group"><label>Jurulatih Ditugaskan</label><select id="p-jurulatih" class="form-control"><option value="">-- Tiada / Pilih Jurulatih --</option></select></div>
+        <div class="form-group"><label>Status</label><select id="p-status" class="form-control"><option value="Aktif">Aktif</option><option value="Alumni">Alumni</option><option value="Tidak Aktif">Tidak Aktif</option></select></div>
+        <div class="form-group"><label>No. IC</label><input type="text" id="p-ic" class="form-control" placeholder="cth: 050101-13-1234" /></div>
+      </div>
+      <div class="form-group"><label>Catatan Khusus</label><textarea id="p-catatan" class="form-control" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal('modal-peserta')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanPeserta()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== MODAL: JURULATIH -->
+<div class="modal-overlay" id="modal-jurulatih">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-tajuk-jurulatih">Tambah Jurulatih Baru</h3><button class="modal-close" onclick="tutupModal('modal-jurulatih')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="jurulatih-id" />
+      <div class="form-grid-2">
+        <div class="form-group"><label>Nama Penuh *</label><input type="text" id="j-nama" class="form-control" placeholder="Nama penuh jurulatih" /></div>
+        <div class="form-group"><label>Jabatan *</label><input type="text" id="j-jabatan" class="form-control" placeholder="cth: Jabatan Kejuruteraan Mekanikal" /></div>
+        <div class="form-group"><label>Bidang Kepakaran *</label><input type="text" id="j-bidang" class="form-control" placeholder="cth: CNC / Mechanical CAD" /></div>
+        <div class="form-group"><label>E-mel</label><input type="email" id="j-email" class="form-control" placeholder="email@pks.edu.my" /></div>
+        <div class="form-group"><label>No. Telefon</label><input type="tel" id="j-tel" class="form-control" placeholder="cth: 082-123456" /></div>
+        <div class="form-group"><label>Status</label><select id="j-status" class="form-control"><option value="Aktif">Aktif</option><option value="Tidak Aktif">Tidak Aktif</option></select></div>
+      </div>
+      <div class="form-group"><label>Catatan</label><textarea id="j-catatan" class="form-control" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal('modal-jurulatih')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanJurulatih()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== MODAL: PERTANDINGAN -->
+<div class="modal-overlay" id="modal-pertandingan">
+  <div class="modal">
+    <div class="modal-header"><h3 id="modal-tajuk-pt">Tambah Pertandingan Baru</h3><button class="modal-close" onclick="tutupModal('modal-pertandingan')">&times;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pertandingan-id" />
+      <div class="form-grid-2">
+        <div class="form-group" style="grid-column:1/-1;"><label>Nama Pertandingan *</label><input type="text" id="pt-nama" class="form-control" placeholder="cth: PKS Skills 2025" /></div>
+        <div class="form-group"><label>Peringkat *</label>
+          <select id="pt-peringkat" class="form-control">
+            <option value="">-- Pilih Peringkat --</option>
+            <option value="Dalaman">Dalaman (PKS Skills)</option>
+            <option value="Negeri">Negeri (WSM Sarawak)</option>
+            <option value="Kebangsaan">Kebangsaan (PolyCCSkills / WSM Belia)</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Lokasi</label><input type="text" id="pt-lokasi" class="form-control" placeholder="cth: Dewan PKS / Kuching" /></div>
+        <div class="form-group"><label>Tarikh Mula *</label><input type="date" id="pt-tarikh-mula" class="form-control" /></div>
+        <div class="form-group"><label>Tarikh Tamat</label><input type="date" id="pt-tarikh-tamat" class="form-control" /></div>
+      </div>
+      <div class="form-group"><label>Catatan</label><textarea id="pt-catatan" class="form-control" rows="2" placeholder="Catatan tambahan..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal('modal-pertandingan')">Batal</button>
+      <button class="btn btn-primary" onclick="simpanPt()"><i class="fa-solid fa-floppy-disk"></i> Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== MODAL: PENYERTAAN -->
+<div class="modal-overlay" id="modal-penyertaan">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <h3><i class="fa-solid fa-users" style="color:var(--pks-biru);margin-right:8px;"></i>Urus Penyertaan — <span id="modal-pt-nama"></span></h3>
+      <button class="modal-close" onclick="tutupModal('modal-penyertaan')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header"><h2>Tambah Peserta</h2></div>
+        <div class="card-body">
+          <div class="form-grid-2">
+            <div class="form-group"><label>Pilih Peserta *</label><select id="pn-peserta" class="form-control"><option value="">-- Pilih Peserta --</option></select></div>
+            <div class="form-group"><label>Jurulatih Mengiringi</label><select id="pn-jurulatih" class="form-control"><option value="">-- Pilih Jurulatih --</option></select></div>
+            <div class="form-group"><label>Keputusan / Medal</label>
+              <select id="pn-medal" class="form-control">
+                <option value="Penyertaan">Penyertaan</option><option value="Gangsa">Gangsa</option>
+                <option value="Perak">Perak</option><option value="Emas">Emas</option>
+                <option value="Cemerlang">Cemerlang</option><option value="Naib Johan">Naib Johan</option><option value="Johan">Johan</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Tempat</label><input type="text" id="pn-tempat" class="form-control" placeholder="cth: 1, 2, 3..." /></div>
+          </div>
+          <button class="btn btn-emas" onclick="tambahPenyertaan()"><i class="fa-solid fa-plus"></i> Tambah Penyertaan</button>
+        </div>
+      </div>
+      <div class="table-wrapper"><table>
+        <thead><tr><th>Peserta</th><th>Jurulatih</th><th>Keputusan</th><th>Tempat</th><th>Tindakan</th></tr></thead>
+        <tbody id="tbody-penyertaan"></tbody>
+      </table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== MODAL: PADAM UMUM -->
+<div class="modal-overlay" id="modal-padam">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header"><h3><i class="fa-solid fa-triangle-exclamation" style="color:var(--pks-danger);margin-right:8px;"></i>Sahkan Padam</h3><button class="modal-close" onclick="tutupModal('modal-padam')">&times;</button></div>
+    <div class="modal-body">
+      <p>Adakah anda pasti ingin memadam rekod <strong id="padam-nama"></strong>?</p>
+      <p style="color:var(--pks-teks-muted);font-size:12px;margin-top:8px;">Tindakan ini tidak boleh dibatalkan.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="tutupModal('modal-padam')">Batal</button>
+      <button class="btn btn-danger" id="btn-sahkan-padam"><i class="fa-solid fa-trash"></i> Ya, Padam</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================== JAVASCRIPT -->
+<script>
+// ---- Data Store ----
+function pksGet(k) { try { return JSON.parse(localStorage.getItem("pks_" + k) || "[]"); } catch { return []; } }
+function pksSave(k, v) { localStorage.setItem("pks_" + k, JSON.stringify(v)); }
+function pksId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+// ---- Data Contoh ----
+function pksInitContoh() {
+  if (pksGet("jurulatih").length > 0) return;
+  pksSave("jurulatih", [
+    { id:"j1", nama:"En. Razif bin Hassan", jabatan:"Jabatan Kejuruteraan Mekanikal", bidangKepakaran:"CNC / Mechanical CAD", email:"razif@pks.edu.my", noTel:"082-123456", status:"Aktif", catatan:"" },
+    { id:"j2", nama:"Pn. Siti Norzalina bt Md Zin", jabatan:"Jabatan Teknologi Maklumat", bidangKepakaran:"IT Network / Cybersecurity", email:"siti@pks.edu.my", noTel:"082-234567", status:"Aktif", catatan:"" },
+    { id:"j3", nama:"En. Jeffery anak Entika", jabatan:"Jabatan Kejuruteraan Awam", bidangKepakaran:"Bricklaying / Concrete Works", email:"jeffery@pks.edu.my", noTel:"082-345678", status:"Aktif", catatan:"" }
+  ]);
+  pksSave("peserta", [
+    { id:"p1", nama:"Muhammad Hafiz bin Abdullah", noMatrik:"PKS2301001", program:"Diploma Kejuruteraan Mekanikal", jabatan:"Jabatan Kejuruteraan Mekanikal", tahunPengajian:"2", noTel:"011-11112222", bidangKemahiran:"CNC Turning", jurulatihId:"j1", status:"Aktif", noIc:"", catatan:"", tarikhDaftar:new Date().toISOString() },
+    { id:"p2", nama:"Nurul Ain binti Sahari", noMatrik:"PKS2301002", program:"Diploma Teknologi Maklumat", jabatan:"Jabatan Teknologi Maklumat", tahunPengajian:"3", noTel:"011-22223333", bidangKemahiran:"IT Network Systems", jurulatihId:"j2", status:"Aktif", noIc:"", catatan:"", tarikhDaftar:new Date().toISOString() },
+    { id:"p3", nama:"Bong Wei Liang", noMatrik:"PKS2201003", program:"Diploma Kejuruteraan Awam", jabatan:"Jabatan Kejuruteraan Awam", tahunPengajian:"3", noTel:"011-33334444", bidangKemahiran:"Bricklaying", jurulatihId:"j3", status:"Aktif", noIc:"", catatan:"", tarikhDaftar:new Date().toISOString() },
+    { id:"p4", nama:"Siti Hajar binti Ramlee", noMatrik:"PKS2301004", program:"Diploma Kejuruteraan Mekanikal", jabatan:"Jabatan Kejuruteraan Mekanikal", tahunPengajian:"1", noTel:"011-44445555", bidangKemahiran:"CNC Milling", jurulatihId:"j1", status:"Aktif", noIc:"", catatan:"", tarikhDaftar:new Date().toISOString() }
+  ]);
+  pksSave("pertandingan", [
+    { id:"pt1", nama:"PKS Skills 2024", peringkat:"Dalaman", lokasi:"Dewan PKS, Kuching", tarikhMula:"2024-09-10", tarikhTamat:"2024-09-11", catatan:"Pertandingan dalaman tahunan PKS", tarikhCipta:new Date().toISOString() },
+    { id:"pt2", nama:"World Skills Malaysia Sarawak 2024", peringkat:"Negeri", lokasi:"UNIMAS, Kota Samarahan", tarikhMula:"2024-11-05", tarikhTamat:"2024-11-07", catatan:"", tarikhCipta:new Date().toISOString() },
+    { id:"pt3", nama:"PolyCCSkills 2025", peringkat:"Kebangsaan", lokasi:"Politeknik Sultan Azlan Shah, Perak", tarikhMula:"2025-03-15", tarikhTamat:"2025-03-17", catatan:"Pertandingan kebangsaan politeknik", tarikhCipta:new Date().toISOString() },
+    { id:"pt4", nama:"PKS Skills 2025", peringkat:"Dalaman", lokasi:"Dewan PKS, Kuching", tarikhMula:"2025-09-20", tarikhTamat:"2025-09-21", catatan:"Akan datang", tarikhCipta:new Date().toISOString() }
+  ]);
+  pksSave("penyertaan", [
+    { id:"pn1", pesertaId:"p1", pertandinganId:"pt1", jurulatihId:"j1", medal:"Emas", tempat:"1", tarikhCipta:new Date().toISOString() },
+    { id:"pn2", pesertaId:"p2", pertandinganId:"pt1", jurulatihId:"j2", medal:"Perak", tempat:"2", tarikhCipta:new Date().toISOString() },
+    { id:"pn3", pesertaId:"p3", pertandinganId:"pt1", jurulatihId:"j3", medal:"Gangsa", tempat:"3", tarikhCipta:new Date().toISOString() },
+    { id:"pn4", pesertaId:"p1", pertandinganId:"pt2", jurulatihId:"j1", medal:"Perak", tempat:"2", tarikhCipta:new Date().toISOString() },
+    { id:"pn5", pesertaId:"p2", pertandinganId:"pt2", jurulatihId:"j2", medal:"Penyertaan", tempat:"-", tarikhCipta:new Date().toISOString() },
+    { id:"pn6", pesertaId:"p1", pertandinganId:"pt3", jurulatihId:"j1", medal:"Emas", tempat:"1", tarikhCipta:new Date().toISOString() },
+    { id:"pn7", pesertaId:"p4", pertandinganId:"pt1", jurulatihId:"j1", medal:"Cemerlang", tempat:"-", tarikhCipta:new Date().toISOString() }
+  ]);
+}
+
+// ---- Toast ----
+function pksToast(msg, jenis) {
+  jenis = jenis || "success";
+  var t = document.createElement("div");
+  t.className = "toast toast-" + jenis;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function(){ t.classList.add("show"); }, 10);
+  setTimeout(function(){ t.classList.remove("show"); setTimeout(function(){ t.remove(); }, 400); }, 3000);
+}
+
+// ---- Navigasi ----
+var halamanAktif = "dashboard";
+var namaHalaman = { dashboard:"Dashboard Utama", peserta:"Pengurusan Peserta", jurulatih:"Pengurusan Jurulatih", pertandingan:"Pengurusan Pertandingan", laporan:"Laporan & Analitik" };
+var chartsDB = {};
+
+function tukarHalaman(id) {
+  document.querySelectorAll(".page").forEach(function(p){ p.classList.remove("aktif"); });
+  document.querySelectorAll(".sidebar-nav a").forEach(function(a){ a.classList.remove("active"); });
+  var pg = document.getElementById("page-" + id);
+  var nav = document.getElementById("nav-" + id);
+  if (pg) pg.classList.add("aktif");
+  if (nav) nav.classList.add("active");
+  document.getElementById("navbar-tajuk").textContent = namaHalaman[id] || id;
+  halamanAktif = id;
+  // Tutup sidebar pada mobile
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar-overlay").classList.remove("active");
+  // Render halaman
+  if (id === "dashboard") renderDashboard();
+  if (id === "peserta") { populateBidangPeserta(); renderPeserta(); }
+  if (id === "jurulatih") renderJurulatih();
+  if (id === "pertandingan") renderGrid();
+  if (id === "laporan") { populatePtDropdown(); renderLaporan(); }
+}
+
+// ---- Modal Utils ----
+function tutupModal(id) { document.getElementById(id).classList.remove("active"); }
+function bukaModal(id) { document.getElementById(id).classList.add("active"); }
+
+var padamCallback = null;
+function tunjukPadam(nama, fn) {
+  document.getElementById("padam-nama").textContent = nama;
+  padamCallback = fn;
+  bukaModal("modal-padam");
+}
+document.getElementById("btn-sahkan-padam").addEventListener("click", function(){
+  if (padamCallback) { padamCallback(); padamCallback = null; }
+  tutupModal("modal-padam");
+});
+
+// ================================================================ DASHBOARD
+var cartaBidangChart = null, cartaPencapaianChart = null, cartaMedalChart = null;
+
+function renderDashboard() {
+  var peserta      = pksGet("peserta");
+  var jurulatih    = pksGet("jurulatih");
+  var pertandingan = pksGet("pertandingan");
+  var penyertaan   = pksGet("penyertaan");
+  var medalJenis   = ["Emas","Perak","Gangsa","Johan","Naib Johan"];
+
+  document.getElementById("stat-peserta").textContent     = peserta.filter(function(p){ return p.status === "Aktif"; }).length;
+  document.getElementById("stat-jurulatih").textContent   = jurulatih.filter(function(j){ return j.status === "Aktif"; }).length;
+  document.getElementById("stat-pertandingan").textContent = pertandingan.length;
+  document.getElementById("stat-medal").textContent       = penyertaan.filter(function(pn){ return medalJenis.indexOf(pn.medal) !== -1; }).length;
+  document.getElementById("stat-penyertaan").textContent  = penyertaan.length;
+
+  // Carta 1: Bidang
+  var bidangKira = {};
+  peserta.forEach(function(p){ if(p.bidangKemahiran) bidangKira[p.bidangKemahiran] = (bidangKira[p.bidangKemahiran]||0)+1; });
+  if (cartaBidangChart) { cartaBidangChart.destroy(); }
+  cartaBidangChart = new Chart(document.getElementById("carta-bidang"), {
+    type:"bar",
+    data:{ labels:Object.keys(bidangKira), datasets:[{ label:"Peserta", data:Object.values(bidangKira), backgroundColor:"#0057B8", borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}}, x:{ticks:{font:{size:11}}} } }
+  });
+
+  // Carta 2: Peringkat
+  var pkira = { "Dalaman":0,"Negeri":0,"Kebangsaan":0 };
+  penyertaan.forEach(function(pn){
+    var pt = pertandingan.find(function(p){ return p.id === pn.pertandinganId; });
+    if (pt && pt.peringkat && pkira[pt.peringkat] !== undefined) pkira[pt.peringkat]++;
+  });
+  if (cartaPencapaianChart) { cartaPencapaianChart.destroy(); }
+  cartaPencapaianChart = new Chart(document.getElementById("carta-pencapaian"), {
+    type:"doughnut",
+    data:{ labels:["Dalaman","Negeri","Kebangsaan"], datasets:[{ data:[pkira.Dalaman,pkira.Negeri,pkira.Kebangsaan], backgroundColor:["#0057B8","#FFB81C","#DC3545"], borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom",labels:{padding:16,font:{size:12}}} } }
+  });
+
+  // Carta 3: Medal
+  var mkira = { "Emas":0,"Perak":0,"Gangsa":0,"Johan":0,"Naib Johan":0,"Cemerlang":0,"Penyertaan":0 };
+  penyertaan.forEach(function(pn){ if(mkira[pn.medal]!==undefined) mkira[pn.medal]++; });
+  if (cartaMedalChart) { cartaMedalChart.destroy(); }
+  cartaMedalChart = new Chart(document.getElementById("carta-medal"), {
+    type:"bar",
+    data:{ labels:Object.keys(mkira), datasets:[{ label:"Bilangan", data:Object.values(mkira), backgroundColor:["#FFB81C","#888","#CD7F32","#DC3545","#FF8C00","#28A745","#0057B8"], borderRadius:6 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }
+  });
+
+  // Akan Datang
+  var sekarang = new Date();
+  var badgePt = { "Dalaman":"badge-dalaman","Negeri":"badge-negeri","Kebangsaan":"badge-kebangsaan" };
+  var akanDatang = pertandingan.filter(function(pt){ return pt.tarikhMula && new Date(pt.tarikhMula) >= sekarang; }).slice(0,5);
+  var elAD = document.getElementById("senarai-akan-datang");
+  if (akanDatang.length === 0) {
+    elAD.innerHTML = '<div class="empty-state" style="padding:20px;"><i class="fa-solid fa-calendar-xmark" style="opacity:.3;display:block;font-size:28px;margin-bottom:8px;"></i><p>Tiada pertandingan akan datang.</p></div>';
+  } else {
+    elAD.innerHTML = akanDatang.map(function(pt){
+      var d = new Date(pt.tarikhMula);
+      return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--pks-border);">' +
+        '<div style="min-width:42px;height:42px;background:var(--pks-biru-gelap);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;line-height:1.2;">' +
+          '<span style="font-size:16px;">' + d.getDate() + '</span>' +
+          '<span>' + d.toLocaleDateString("ms-MY",{month:"short"}) + '</span>' +
+        '</div>' +
+        '<div style="flex:1;"><div style="font-weight:600;font-size:13px;">' + pt.nama + '</div>' +
+        '<div style="font-size:12px;color:var(--pks-teks-muted);"><i class="fa-solid fa-location-dot"></i> ' + (pt.lokasi||"-") + '</div></div>' +
+        '<span class="badge ' + (badgePt[pt.peringkat]||"") + '">' + pt.peringkat + '</span>' +
+      '</div>';
+    }).join("");
+  }
+
+  // Pencapaian Terbaru
+  var terbaru = penyertaan.slice().reverse().slice(0,10);
+  var medalBadge = { "Emas":"badge-emas","Perak":"badge-perak","Gangsa":"badge-gangsa","Johan":"badge-kebangsaan","Naib Johan":"badge-negeri" };
+  var tbodyT = document.getElementById("tbody-terbaru");
+  if (terbaru.length === 0) {
+    tbodyT.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-inbox" style="opacity:.3;display:block;font-size:28px;margin-bottom:8px;"></i><p>Tiada rekod penyertaan.</p></div></td></tr>';
+  } else {
+    tbodyT.innerHTML = terbaru.map(function(pn){
+      var p  = peserta.find(function(x){ return x.id===pn.pesertaId; });
+      var pt = pertandingan.find(function(x){ return x.id===pn.pertandinganId; });
+      var j  = jurulatih.find(function(x){ return x.id===pn.jurulatihId; });
+      return '<tr>' +
+        '<td><strong>' + (p&&p.nama||"-") + '</strong></td>' +
+        '<td>' + (pt&&pt.nama||"-") + '</td>' +
+        '<td><span class="badge ' + (badgePt[pt&&pt.peringkat]||"badge-aktif") + '">' + (pt&&pt.peringkat||"-") + '</span></td>' +
+        '<td><span class="badge ' + (medalBadge[pn.medal]||"badge-aktif") + '">' + (pn.medal||"-") + '</span></td>' +
+        '<td>' + (j&&j.nama||"-") + '</td>' +
+      '</tr>';
+    }).join("");
+  }
+}
+
+// ================================================================ PESERTA
+var halamanPeserta = 1;
+var REKOD_PESERTA = 10;
+
+function populateBidangPeserta() {
+  var p = pksGet("peserta");
+  var bidang = {};
+  p.forEach(function(x){ if(x.bidangKemahiran) bidang[x.bidangKemahiran]=1; });
+  var sel = document.getElementById("tapis-bidang-peserta");
+  var val = sel.value;
+  sel.innerHTML = '<option value="">Semua Bidang</option>';
+  Object.keys(bidang).forEach(function(b){ sel.innerHTML += '<option value="'+b+'"'+(val===b?" selected":"")+'>'+b+'</option>'; });
+}
+
+function renderPeserta() {
+  var peserta = pksGet("peserta");
+  var jurulatih = pksGet("jurulatih");
+  var teks = document.getElementById("carian-peserta").value.toLowerCase();
+  var status = document.getElementById("tapis-status-peserta").value;
+  var bidang = document.getElementById("tapis-bidang-peserta").value;
+  var data = peserta.filter(function(p){
+    return (p.nama&&p.nama.toLowerCase().indexOf(teks)!==-1 || p.noMatrik&&p.noMatrik.toLowerCase().indexOf(teks)!==-1) &&
+           (!status||p.status===status) && (!bidang||p.bidangKemahiran===bidang);
+  });
+  var jumlah = data.length, total = Math.max(1,Math.ceil(jumlah/REKOD_PESERTA));
+  if (halamanPeserta > total) halamanPeserta = 1;
+  var mula = (halamanPeserta-1)*REKOD_PESERTA, baris = data.slice(mula,mula+REKOD_PESERTA);
+  var tbody = document.getElementById("tbody-peserta");
+  if (baris.length===0) {
+    tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-users-slash"></i><p>Tiada rekod peserta.</p></div></td></tr>';
+  } else {
+    tbody.innerHTML = baris.map(function(p,i){
+      var j = jurulatih.find(function(x){return x.id===p.jurulatihId;});
+      var bs = p.status==="Aktif"?"badge-aktif":"badge-alumni";
+      return '<tr><td>'+(mula+i+1)+'</td><td><strong>'+(p.nama||"-")+'</strong></td>' +
+        '<td><code style="font-size:11px;background:#f0f4fa;padding:2px 6px;border-radius:4px;">'+(p.noMatrik||"-")+'</code></td>' +
+        '<td>'+(p.program||"-")+'</td><td>'+(p.bidangKemahiran||"-")+'</td>' +
+        '<td>'+(j?j.nama:"-")+'</td>' +
+        '<td><span class="badge '+bs+'">'+(p.status||"-")+'</span></td>' +
+        '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="bukaBosangPeserta(\''+p.id+'\')"><i class="fa-solid fa-pen"></i></button> ' +
+        '<button class="btn btn-danger btn-sm btn-icon" onclick="tunjukPadam(\''+p.nama.replace(/'/g,"\\'")+'\',function(){padamPesertaFn(\''+p.id+'\');})"><i class="fa-solid fa-trash"></i></button></td>' +
+        '</tr>';
+    }).join("");
+  }
+  document.getElementById("info-pag-peserta").textContent = "Menunjukkan "+(baris.length>0?mula+1:0)+"–"+(mula+baris.length)+" daripada "+jumlah+" rekod";
+  var pb = document.getElementById("pag-btns-peserta"); pb.innerHTML="";
+  var prev=document.createElement("button"); prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled=halamanPeserta<=1; prev.onclick=function(){halamanPeserta--;renderPeserta();}; pb.appendChild(prev);
+  for(var h=1;h<=Math.min(total,7);h++){var b=document.createElement("button");b.textContent=h;if(h===halamanPeserta)b.classList.add("active");(function(hh){b.onclick=function(){halamanPeserta=hh;renderPeserta();};})(h);pb.appendChild(b);}
+  var next=document.createElement("button"); next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled=halamanPeserta>=total; next.onclick=function(){halamanPeserta++;renderPeserta();}; pb.appendChild(next);
+}
+
+function padamPesertaFn(id) {
+  pksSave("peserta", pksGet("peserta").filter(function(x){return x.id!==id;}));
+  pksToast("Rekod peserta berjaya dipadam.");
+  populateBidangPeserta(); renderPeserta();
+}
+
+function bukaBosangPeserta(id) {
+  var jSenarai = pksGet("jurulatih");
+  var sel = document.getElementById("p-jurulatih");
+  sel.innerHTML = '<option value="">-- Tiada / Pilih Jurulatih --</option>';
+  jSenarai.forEach(function(x){ sel.innerHTML += '<option value="' + x.id + '">' + x.nama + (x.jabatan?" ("+x.jabatan+")":"") + '</option>'; });
+  if (id) {
+    var p = pksGet("peserta").find(function(x){return x.id===id;});
+    document.getElementById("modal-tajuk-peserta").textContent="Kemaskini Rekod Peserta";
+    document.getElementById("peserta-id").value=id;
+    document.getElementById("p-nama").value=p.nama||"";
+    document.getElementById("p-matrik").value=p.noMatrik||"";
+    document.getElementById("p-program").value=p.program||"";
+    document.getElementById("p-jabatan").value=p.jabatan||"";
+    document.getElementById("p-tahun").value=p.tahunPengajian||"";
+    document.getElementById("p-tel").value=p.noTel||"";
+    document.getElementById("p-bidang").value=p.bidangKemahiran||"";
+    document.getElementById("p-jurulatih").value=p.jurulatihId||"";
+    document.getElementById("p-status").value=p.status||"Aktif";
+    document.getElementById("p-ic").value=p.noIc||"";
+    document.getElementById("p-catatan").value=p.catatan||"";
+  } else {
+    document.getElementById("modal-tajuk-peserta").textContent="Tambah Peserta Baru";
+    document.getElementById("peserta-id").value="";
+    ["p-nama","p-matrik","p-program","p-jabatan","p-tel","p-bidang","p-ic","p-catatan"].forEach(function(fid){document.getElementById(fid).value="";});
+    document.getElementById("p-tahun").value=""; document.getElementById("p-status").value="Aktif"; document.getElementById("p-jurulatih").value="";
+  }
+  bukaModal("modal-peserta");
+}
+
+function simpanPeserta() {
+  var nama=document.getElementById("p-nama").value.trim();
+  var noMatrik=document.getElementById("p-matrik").value.trim();
+  var program=document.getElementById("p-program").value.trim();
+  var jabatan=document.getElementById("p-jabatan").value.trim();
+  var bidangKemahiran=document.getElementById("p-bidang").value.trim();
+  if (!nama||!noMatrik||!program||!jabatan||!bidangKemahiran) { pksToast("Sila lengkapkan semua medan bertanda *.","error"); return; }
+  var senarai=pksGet("peserta"), idSedia=document.getElementById("peserta-id").value;
+  var data={id:idSedia||pksId(),nama:nama,noMatrik:noMatrik,program:program,jabatan:jabatan,
+    tahunPengajian:document.getElementById("p-tahun").value,
+    noTel:document.getElementById("p-tel").value.trim(),
+    bidangKemahiran:bidangKemahiran,jurulatihId:document.getElementById("p-jurulatih").value||null,
+    status:document.getElementById("p-status").value,
+    noIc:document.getElementById("p-ic").value.trim(),
+    catatan:document.getElementById("p-catatan").value.trim(),
+    tarikhDaftar:idSedia?(senarai.find(function(x){return x.id===idSedia;})||{}).tarikhDaftar||new Date().toISOString():new Date().toISOString()
+  };
+  if (idSedia) { pksSave("peserta",senarai.map(function(x){return x.id===idSedia?data:x;})); pksToast("Rekod peserta berjaya dikemaskini."); }
+  else { pksSave("peserta",[].concat(senarai,[data])); pksToast("Peserta baru berjaya didaftarkan."); }
+  tutupModal("modal-peserta");
+  populateBidangPeserta(); renderPeserta();
+}
+
+// ================================================================ JURULATIH
+function renderJurulatih() {
+  var jurulatih = pksGet("jurulatih"), peserta = pksGet("peserta");
+  var teks = document.getElementById("carian-jurulatih").value.toLowerCase();
+  var status = document.getElementById("tapis-status-jurulatih").value;
+  var data = jurulatih.filter(function(j){ return j.nama&&j.nama.toLowerCase().indexOf(teks)!==-1 && (!status||j.status===status); });
+  var tbody = document.getElementById("tbody-jurulatih");
+  if (data.length===0) { tbody.innerHTML='<tr><td colspan="8"><div class="empty-state"><i class="fa-solid fa-user-slash"></i><p>Tiada rekod jurulatih.</p></div></td></tr>'; return; }
+  tbody.innerHTML = data.map(function(j,i){
+    var bil = peserta.filter(function(p){ return p.jurulatihId===j.id; }).length;
+    return '<tr><td>'+(i+1)+'</td><td><strong>'+(j.nama||"-")+'</strong></td>' +
+      '<td>'+(j.jabatan||"-")+'</td><td>'+(j.bidangKepakaran||"-")+'</td>' +
+      '<td>'+(j.email?'<a href="mailto:'+j.email+'" style="color:var(--pks-biru);">'+j.email+'</a>':"-")+'</td>' +
+      '<td><strong style="color:var(--pks-biru-gelap);font-size:16px;">'+bil+'</strong></td>' +
+      '<td><span class="badge '+(j.status==="Aktif"?"badge-aktif":"badge-alumni")+'">'+(j.status||"-")+'</span></td>' +
+      '<td><button class="btn btn-secondary btn-sm btn-icon" onclick="bukaBorangJurulatih(\''+j.id+'\')"><i class="fa-solid fa-pen"></i></button> ' +
+      '<button class="btn btn-danger btn-sm btn-icon" onclick="tunjukPadam(\''+j.nama.replace(/'/g,"\\'")+'\',function(){padamJurulatihFn(\''+j.id+'\');})"><i class="fa-solid fa-trash"></i></button></td>' +
+      '</tr>';
+  }).join("");
+}
+
+function padamJurulatihFn(id) {
+  pksSave("jurulatih", pksGet("jurulatih").filter(function(x){return x.id!==id;}));
+  pksToast("Rekod jurulatih berjaya dipadam."); renderJurulatih();
+}
+
+function bukaBorangJurulatih(id) {
+  if (id) {
+    var j = pksGet("jurulatih").find(function(x){return x.id===id;});
+    document.getElementById("modal-tajuk-jurulatih").textContent="Kemaskini Rekod Jurulatih";
+    document.getElementById("jurulatih-id").value=id;
+    document.getElementById("j-nama").value=j.nama||"";
+    document.getElementById("j-jabatan").value=j.jabatan||"";
+    document.getElementById("j-bidang").value=j.bidangKepakaran||"";
+    document.getElementById("j-email").value=j.email||"";
+    document.getElementById("j-tel").value=j.noTel||"";
+    document.getElementById("j-status").value=j.status||"Aktif";
+    document.getElementById("j-catatan").value=j.catatan||"";
+  } else {
+    document.getElementById("modal-tajuk-jurulatih").textContent="Tambah Jurulatih Baru";
+    document.getElementById("jurulatih-id").value="";
+    ["j-nama","j-jabatan","j-bidang","j-email","j-tel","j-catatan"].forEach(function(fid){document.getElementById(fid).value="";});
+    document.getElementById("j-status").value="Aktif";
+  }
+  bukaModal("modal-jurulatih");
+}
+
+function simpanJurulatih() {
+  var nama=document.getElementById("j-nama").value.trim();
+  var jabatan=document.getElementById("j-jabatan").value.trim();
+  var bidangKepakaran=document.getElementById("j-bidang").value.trim();
+  if (!nama||!jabatan||!bidangKepakaran) { pksToast("Sila lengkapkan semua medan bertanda *.","error"); return; }
+  var senarai=pksGet("jurulatih"), idSedia=document.getElementById("jurulatih-id").value;
+  var data={id:idSedia||pksId(),nama:nama,jabatan:jabatan,bidangKepakaran:bidangKepakaran,
+    email:document.getElementById("j-email").value.trim(),
+    noTel:document.getElementById("j-tel").value.trim(),
+    status:document.getElementById("j-status").value,
+    catatan:document.getElementById("j-catatan").value.trim()
+  };
+  if (idSedia) { pksSave("jurulatih",senarai.map(function(x){return x.id===idSedia?data:x;})); pksToast("Rekod jurulatih berjaya dikemaskini."); }
+  else { pksSave("jurulatih",[].concat(senarai,[data])); pksToast("Jurulatih baru berjaya didaftarkan."); }
+  tutupModal("modal-jurulatih");
+  renderJurulatih();
+}
+
+// ================================================================ PERTANDINGAN
+var aktifPtId = null;
+var badgePt = { "Dalaman":"badge-dalaman","Negeri":"badge-negeri","Kebangsaan":"badge-kebangsaan" };
+var ikonPt  = { "Dalaman":"fa-building","Negeri":"fa-flag","Kebangsaan":"fa-star" };
+var badgeMedal = { "Emas":"badge-emas","Perak":"badge-perak","Gangsa":"badge-gangsa","Johan":"badge-kebangsaan","Naib Johan":"badge-negeri" };
+
+function renderGrid() {
+  var pt = pksGet("pertandingan");
+  var teks = document.getElementById("carian-pt").value.toLowerCase();
+  var peringkat = document.getElementById("tapis-peringkat-pt").value;
+  var data = pt.filter(function(p){ return p.nama&&p.nama.toLowerCase().indexOf(teks)!==-1&&(!peringkat||p.peringkat===peringkat); });
+  var grid = document.getElementById("grid-pt");
+  if (data.length===0) { grid.innerHTML='<div class="empty-state" style="grid-column:1/-1;"><i class="fa-solid fa-medal" style="opacity:.3;font-size:48px;display:block;margin-bottom:12px;"></i><p>Tiada pertandingan direkod.</p></div>'; return; }
+  grid.innerHTML = data.map(function(p){
+    var tMula = p.tarikhMula ? new Date(p.tarikhMula).toLocaleDateString("ms-MY") : "-";
+    var tTamat = p.tarikhTamat ? " — "+new Date(p.tarikhTamat).toLocaleDateString("ms-MY") : "";
+    return '<div class="card">' +
+      '<div class="card-header" style="background:var(--pks-biru-gelap);border-radius:8px 8px 0 0;">' +
+        '<h2 style="color:white;font-size:13px;">'+(p.nama||"-")+'</h2>' +
+        '<span class="badge '+(badgePt[p.peringkat]||"")+'"><i class="fa-solid '+(ikonPt[p.peringkat]||"fa-circle")+'"></i> '+(p.peringkat||"-")+'</span>' +
+      '</div>' +
+      '<div class="card-body" style="padding:12px 14px;">' +
+        '<div style="font-size:12px;color:var(--pks-teks-muted);display:flex;flex-direction:column;gap:5px;">' +
+          '<span><i class="fa-solid fa-calendar" style="color:var(--pks-biru);width:14px;"></i> '+tMula+tTamat+'</span>' +
+          '<span><i class="fa-solid fa-location-dot" style="color:var(--pks-biru);width:14px;"></i> '+(p.lokasi||"Tiada lokasi")+'</span>' +
+          (p.catatan?'<span><i class="fa-solid fa-note-sticky" style="color:var(--pks-biru);width:14px;"></i> '+p.catatan+'</span>':"") +
+        '</div>' +
+        '<div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">' +
+          '<button class="btn btn-emas btn-sm" onclick="bukaPenyertaan(\''+p.id+'\',\''+p.nama.replace(/'/g,"\\'")+'\')"><i class="fa-solid fa-users"></i> Urus Penyertaan</button>' +
+          '<button class="btn btn-secondary btn-sm" onclick="bukaBorangPt(\''+p.id+'\')"><i class="fa-solid fa-pen"></i> Edit</button>' +
+          '<button class="btn btn-danger btn-sm" onclick="tunjukPadam(\''+p.nama.replace(/'/g,"\\'")+'\',function(){padamPtFn(\''+p.id+'\');})"><i class="fa-solid fa-trash"></i></button>' +
+        '</div>' +
+      '</div></div>';
+  }).join("");
+}
+
+function padamPtFn(id) {
+  pksSave("pertandingan", pksGet("pertandingan").filter(function(x){return x.id!==id;}));
+  pksSave("penyertaan", pksGet("penyertaan").filter(function(x){return x.pertandinganId!==id;}));
+  pksToast("Pertandingan berjaya dipadam."); renderGrid();
+}
+
+function bukaBorangPt(id) {
+  if (id) {
+    var p = pksGet("pertandingan").find(function(x){return x.id===id;});
+    document.getElementById("modal-tajuk-pt").textContent="Kemaskini Pertandingan";
+    document.getElementById("pertandingan-id").value=id;
+    document.getElementById("pt-nama").value=p.nama||"";
+    document.getElementById("pt-peringkat").value=p.peringkat||"";
+    document.getElementById("pt-lokasi").value=p.lokasi||"";
+    document.getElementById("pt-catatan").value=p.catatan||"";
+    document.getElementById("pt-tarikh-mula").value=p.tarikhMula||"";
+    document.getElementById("pt-tarikh-tamat").value=p.tarikhTamat||"";
+  } else {
+    document.getElementById("modal-tajuk-pt").textContent="Tambah Pertandingan Baru";
+    document.getElementById("pertandingan-id").value="";
+    ["pt-nama","pt-lokasi","pt-catatan","pt-tarikh-mula","pt-tarikh-tamat"].forEach(function(fid){document.getElementById(fid).value="";});
+    document.getElementById("pt-peringkat").value="";
+  }
+  bukaModal("modal-pertandingan");
+}
+
+function simpanPt() {
+  var nama=document.getElementById("pt-nama").value.trim();
+  var peringkat=document.getElementById("pt-peringkat").value;
+  var tarikhMula=document.getElementById("pt-tarikh-mula").value;
+  if (!nama||!peringkat||!tarikhMula) { pksToast("Sila lengkapkan nama, peringkat, dan tarikh mula.","error"); return; }
+  var senarai=pksGet("pertandingan"), idSedia=document.getElementById("pertandingan-id").value;
+  var data={id:idSedia||pksId(),nama:nama,peringkat:peringkat,
+    lokasi:document.getElementById("pt-lokasi").value.trim(),
+    catatan:document.getElementById("pt-catatan").value.trim(),
+    tarikhMula:tarikhMula,tarikhTamat:document.getElementById("pt-tarikh-tamat").value||"",
+    tarikhCipta:idSedia?(senarai.find(function(x){return x.id===idSedia;})||{}).tarikhCipta||new Date().toISOString():new Date().toISOString()
+  };
+  if (idSedia) { pksSave("pertandingan",senarai.map(function(x){return x.id===idSedia?data:x;})); pksToast("Pertandingan berjaya dikemaskini."); }
+  else { pksSave("pertandingan",[].concat(senarai,[data])); pksToast("Pertandingan baru berjaya ditambah."); }
+  tutupModal("modal-pertandingan"); renderGrid();
+}
+
+function bukaPenyertaan(id, nama) {
+  aktifPtId = id;
+  document.getElementById("modal-pt-nama").textContent = nama;
+  var peserta = pksGet("peserta"), jurulatih = pksGet("jurulatih");
+  var selP = document.getElementById("pn-peserta"), selJ = document.getElementById("pn-jurulatih");
+  selP.innerHTML='<option value="">-- Pilih Peserta --</option>';
+  selJ.innerHTML='<option value="">-- Pilih Jurulatih --</option>';
+  peserta.forEach(function(p){selP.innerHTML+='<option value="'+p.id+'">'+p.nama+' ('+(p.noMatrik||"")+')</option>';});
+  jurulatih.forEach(function(j){selJ.innerHTML+='<option value="'+j.id+'">'+j.nama+'</option>';});
+  renderPenyertaanModal(id);
+  bukaModal("modal-penyertaan");
+}
+
+function renderPenyertaanModal(ptId) {
+  var penyertaan = pksGet("penyertaan").filter(function(pn){return pn.pertandinganId===ptId;});
+  var peserta = pksGet("peserta"), jurulatih = pksGet("jurulatih");
+  var tbody = document.getElementById("tbody-penyertaan");
+  if (penyertaan.length===0) { tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--pks-teks-muted);">Tiada penyertaan lagi.</td></tr>'; return; }
+  tbody.innerHTML = penyertaan.map(function(pn){
+    var p = peserta.find(function(x){return x.id===pn.pesertaId;})||{};
+    var j = jurulatih.find(function(x){return x.id===pn.jurulatihId;})||{};
+    return '<tr><td><strong>'+(p.nama||"-")+'</strong></td><td>'+(j.nama||"-")+'</td>' +
+      '<td><span class="badge '+(badgeMedal[pn.medal]||"badge-aktif")+'">'+(pn.medal||"-")+'</span></td>' +
+      '<td>'+(pn.tempat||"-")+'</td>' +
+      '<td><button class="btn btn-danger btn-sm btn-icon" onclick="padamPenyertaanFn(\''+pn.id+'\')"><i class="fa-solid fa-trash"></i></button></td></tr>';
+  }).join("");
+}
+
+function padamPenyertaanFn(id) { pksSave("penyertaan",pksGet("penyertaan").filter(function(x){return x.id!==id;})); pksToast("Penyertaan dipadam."); renderPenyertaanModal(aktifPtId); }
+
+function tambahPenyertaan() {
+  var pesertaId=document.getElementById("pn-peserta").value;
+  if (!pesertaId) { pksToast("Sila pilih peserta.","error"); return; }
+  pksSave("penyertaan",[].concat(pksGet("penyertaan"),[{id:pksId(),pertandinganId:aktifPtId,pesertaId:pesertaId,
+    jurulatihId:document.getElementById("pn-jurulatih").value||null,
+    medal:document.getElementById("pn-medal").value,
+    tempat:document.getElementById("pn-tempat").value.trim(),
+    tarikhCipta:new Date().toISOString()
+  }]));
+  document.getElementById("pn-peserta").value=""; document.getElementById("pn-tempat").value="";
+  pksToast("Penyertaan berjaya ditambah."); renderPenyertaanModal(aktifPtId);
+}
+
+// ================================================================ LAPORAN
+var halamanLap = 1;
+var REKOD_LAP = 15;
+
+function populatePtDropdown() {
+  var pertandingan = pksGet("pertandingan");
+  var sel = document.getElementById("tapis-pt-lap");
+  sel.innerHTML = '<option value="">Semua Pertandingan</option>';
+  pertandingan.forEach(function(p){ sel.innerHTML+='<option value="'+p.id+'">'+p.nama+'</option>'; });
+}
+
+function renderLaporan() {
+  var penyertaan = pksGet("penyertaan");
+  var peserta = pksGet("peserta");
+  var pertandingan = pksGet("pertandingan");
+  var jurulatih = pksGet("jurulatih");
+
+  var teks = document.getElementById("carian-lap").value.toLowerCase();
+  var peringkat = document.getElementById("tapis-peringkat-lap").value;
+  var ptId = document.getElementById("tapis-pt-lap").value;
+  var medal = document.getElementById("tapis-medal-lap").value;
+
+  var data = penyertaan.filter(function(pn){
+    var p = peserta.find(function(x){return x.id===pn.pesertaId;})||{};
+    var pt = pertandingan.find(function(x){return x.id===pn.pertandinganId;})||{};
+    return (!teks||((p.nama||"").toLowerCase().indexOf(teks)!==-1)||((p.noMatrik||"").toLowerCase().indexOf(teks)!==-1)) &&
+           (!peringkat||pt.peringkat===peringkat) && (!ptId||pn.pertandinganId===ptId) && (!medal||pn.medal===medal);
+  });
+
+  document.getElementById("rkad-penyertaan").textContent = data.length;
+  document.getElementById("rkad-emas").textContent = data.filter(function(d){return d.medal==="Emas";}).length;
+  document.getElementById("rkad-perak").textContent = data.filter(function(d){return d.medal==="Perak";}).length;
+  document.getElementById("rkad-gangsa").textContent = data.filter(function(d){return d.medal==="Gangsa";}).length;
+
+  var jumlah = data.length, total = Math.max(1,Math.ceil(jumlah/REKOD_LAP));
+  if (halamanLap > total) halamanLap = 1;
+  var mula = (halamanLap-1)*REKOD_LAP, baris = data.slice(mula,mula+REKOD_LAP);
+  document.getElementById("info-rekod-lap").textContent = jumlah+" rekod ditemui";
+
+  var tbody = document.getElementById("tbody-laporan");
+  if (baris.length===0) {
+    tbody.innerHTML='<tr><td colspan="9"><div class="empty-state"><i class="fa-solid fa-inbox" style="opacity:.3;display:block;font-size:32px;margin-bottom:8px;"></i><p>Tiada rekod ditemui.</p></div></td></tr>';
+  } else {
+    tbody.innerHTML = baris.map(function(pn,i){
+      var p = peserta.find(function(x){return x.id===pn.pesertaId;})||{};
+      var pt = pertandingan.find(function(x){return x.id===pn.pertandinganId;})||{};
+      var j = jurulatih.find(function(x){return x.id===pn.jurulatihId;})||{};
+      return '<tr><td>'+(mula+i+1)+'</td>' +
+        '<td><strong>'+(p.nama||"-")+'</strong></td>' +
+        '<td><code style="font-size:11px;background:#f0f4fa;padding:2px 6px;border-radius:4px;">'+(p.noMatrik||"-")+'</code></td>' +
+        '<td>'+(p.bidangKemahiran||"-")+'</td><td>'+(pt.nama||"-")+'</td>' +
+        '<td><span class="badge '+(badgePt[pt.peringkat]||"badge-aktif")+'">'+(pt.peringkat||"-")+'</span></td>' +
+        '<td><span class="badge '+(badgeMedal[pn.medal]||"badge-aktif")+'">'+(pn.medal||"-")+'</span></td>' +
+        '<td>'+(pn.tempat||"-")+'</td><td>'+(j.nama||"-")+'</td></tr>';
+    }).join("");
+  }
+  document.getElementById("info-pag-lap").textContent = "Menunjukkan "+(baris.length>0?mula+1:0)+"–"+(mula+baris.length)+" daripada "+jumlah+" rekod";
+  var pb = document.getElementById("pag-btns-lap"); pb.innerHTML="";
+  var prev=document.createElement("button"); prev.innerHTML='<i class="fa-solid fa-chevron-left"></i>'; prev.disabled=halamanLap<=1; prev.onclick=function(){halamanLap--;renderLaporan();}; pb.appendChild(prev);
+  for(var h=1;h<=Math.min(total,7);h++){var b=document.createElement("button");b.textContent=h;if(h===halamanLap)b.classList.add("active");(function(hh){b.onclick=function(){halamanLap=hh;renderLaporan();};})(h);pb.appendChild(b);}
+  var next=document.createElement("button"); next.innerHTML='<i class="fa-solid fa-chevron-right"></i>'; next.disabled=halamanLap>=total; next.onclick=function(){halamanLap++;renderLaporan();}; pb.appendChild(next);
+}
+
+// ================================================================ HAMBURGER
+document.getElementById("hamburger-btn").addEventListener("click", function(){
+  document.getElementById("sidebar").classList.toggle("open");
+  document.getElementById("sidebar-overlay").classList.toggle("active");
+});
+document.getElementById("sidebar-overlay").addEventListener("click", function(){
+  document.getElementById("sidebar").classList.remove("open");
+  document.getElementById("sidebar-overlay").classList.remove("active");
+});
+
+// ================================================================ INIT
+pksInitContoh();
+document.getElementById("sidebar-footer-tahun").textContent = "© " + new Date().getFullYear() + " Politeknik Kuching Sarawak";
+document.getElementById("print-tarikh").textContent = "Politeknik Kuching Sarawak — Dicetak: " + new Date().toLocaleDateString("ms-MY");
+renderDashboard();
+</script>
+</body>
+</html>

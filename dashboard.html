@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — PKS Skills</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="js/pks-shared.js"></script>
+</head>
+<body>
+  <div class="app-wrapper" id="app"></div>
+  <div id="loading-spinner"><div class="spinner"></div></div>
+
+  <script>
+    pksInitContoh();
+
+    document.getElementById("app").innerHTML =
+      pksLayout("Dashboard Utama", "dashboard") +
+      '<div class="page-content">' +
+        '<div style="margin-bottom:20px;">' +
+          '<h1 style="font-size:18px;color:var(--pks-biru-gelap);">Selamat Datang, Rizal &#x1F44B;</h1>' +
+          '<p style="color:var(--pks-teks-muted);font-size:13px;">Paparan ringkasan program kemahiran Politeknik Kuching Sarawak</p>' +
+        '</div>' +
+        '<div class="stats-grid">' +
+          '<div class="stat-card"><div class="stat-icon biru"><i class="fa-solid fa-users"></i></div><div class="stat-info"><div class="stat-label">Peserta Aktif</div><div class="stat-nilai" id="stat-peserta">-</div></div></div>' +
+          '<div class="stat-card"><div class="stat-icon emas"><i class="fa-solid fa-chalkboard-user"></i></div><div class="stat-info"><div class="stat-label">Jurulatih</div><div class="stat-nilai" id="stat-jurulatih">-</div></div></div>' +
+          '<div class="stat-card"><div class="stat-icon hijau"><i class="fa-solid fa-medal"></i></div><div class="stat-info"><div class="stat-label">Pertandingan</div><div class="stat-nilai" id="stat-pertandingan">-</div></div></div>' +
+          '<div class="stat-card"><div class="stat-icon emas"><i class="fa-solid fa-trophy"></i></div><div class="stat-info"><div class="stat-label">Jumlah Medal</div><div class="stat-nilai" id="stat-medal">-</div></div></div>' +
+          '<div class="stat-card"><div class="stat-icon cyan"><i class="fa-solid fa-flag"></i></div><div class="stat-info"><div class="stat-label">Penyertaan</div><div class="stat-nilai" id="stat-penyertaan">-</div></div></div>' +
+        '</div>' +
+        '<div class="grid-2" style="margin-bottom:20px;">' +
+          '<div class="card"><div class="card-header"><h2><i class="fa-solid fa-chart-bar" style="color:var(--pks-biru);margin-right:8px;"></i>Penyertaan Mengikut Bidang</h2></div><div class="card-body"><div class="chart-wrapper"><canvas id="carta-bidang"></canvas></div></div></div>' +
+          '<div class="card"><div class="card-header"><h2><i class="fa-solid fa-chart-pie" style="color:var(--pks-emas-gelap);margin-right:8px;"></i>Penyertaan Mengikut Peringkat</h2></div><div class="card-body"><div class="chart-wrapper"><canvas id="carta-pencapaian"></canvas></div></div></div>' +
+        '</div>' +
+        '<div class="grid-2" style="margin-bottom:20px;">' +
+          '<div class="card"><div class="card-header"><h2><i class="fa-solid fa-chart-column" style="color:var(--pks-biru);margin-right:8px;"></i>Medal Mengikut Jenis</h2></div><div class="card-body"><div class="chart-wrapper"><canvas id="carta-medal"></canvas></div></div></div>' +
+          '<div class="card"><div class="card-header"><h2><i class="fa-solid fa-calendar-days" style="color:var(--pks-success);margin-right:8px;"></i>Pertandingan Akan Datang</h2></div><div class="card-body" style="padding:12px 16px;"><div id="senarai-akan-datang"></div></div></div>' +
+        '</div>' +
+        '<div class="card">' +
+          '<div class="card-header"><h2><i class="fa-solid fa-star" style="color:var(--pks-emas-gelap);margin-right:8px;"></i>Pencapaian Terbaru</h2>' +
+          '<a href="laporan.html" class="btn btn-secondary btn-sm">Lihat Semua <i class="fa-solid fa-arrow-right"></i></a></div>' +
+          '<div class="card-body" style="padding:0;"><div class="table-wrapper"><table>' +
+            '<thead><tr><th>Peserta</th><th>Pertandingan</th><th>Peringkat</th><th>Keputusan</th><th>Jurulatih</th></tr></thead>' +
+            '<tbody id="tbody-terbaru"></tbody>' +
+          '</table></div></div>' +
+        '</div>' +
+      '</div></div>';
+
+    pksInitLayout();
+
+    var peserta      = pksGet("peserta");
+    var jurulatih    = pksGet("jurulatih");
+    var pertandingan = pksGet("pertandingan");
+    var penyertaan   = pksGet("penyertaan");
+    var medalJenis   = ["Emas","Perak","Gangsa","Johan","Naib Johan"];
+
+    document.getElementById("stat-peserta").textContent     = peserta.filter(function(p){ return p.status === "Aktif"; }).length;
+    document.getElementById("stat-jurulatih").textContent   = jurulatih.filter(function(j){ return j.status === "Aktif"; }).length;
+    document.getElementById("stat-pertandingan").textContent = pertandingan.length;
+    document.getElementById("stat-medal").textContent       = penyertaan.filter(function(pn){ return medalJenis.indexOf(pn.medal) !== -1; }).length;
+    document.getElementById("stat-penyertaan").textContent  = penyertaan.length;
+
+    // Carta 1: Bidang
+    var bidangKira = {};
+    peserta.forEach(function(p){ if(p.bidangKemahiran) bidangKira[p.bidangKemahiran] = (bidangKira[p.bidangKemahiran]||0)+1; });
+    new Chart(document.getElementById("carta-bidang"), {
+      type:"bar",
+      data:{ labels:Object.keys(bidangKira), datasets:[{ label:"Peserta", data:Object.values(bidangKira), backgroundColor:"#0057B8", borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}}, x:{ticks:{font:{size:11}}} } }
+    });
+
+    // Carta 2: Peringkat
+    var pkira = { "Dalaman":0, "Negeri":0, "Kebangsaan":0 };
+    penyertaan.forEach(function(pn){
+      var pt = pertandingan.find(function(p){ return p.id === pn.pertandinganId; });
+      if(pt && pt.peringkat && pkira[pt.peringkat] !== undefined) pkira[pt.peringkat]++;
+    });
+    new Chart(document.getElementById("carta-pencapaian"), {
+      type:"doughnut",
+      data:{ labels:["Dalaman","Negeri","Kebangsaan"], datasets:[{ data:[pkira.Dalaman,pkira.Negeri,pkira.Kebangsaan], backgroundColor:["#0057B8","#FFB81C","#DC3545"], borderWidth:2 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:"bottom",labels:{padding:16,font:{size:12}}} } }
+    });
+
+    // Carta 3: Medal
+    var mkira = { "Emas":0,"Perak":0,"Gangsa":0,"Johan":0,"Naib Johan":0,"Cemerlang":0,"Penyertaan":0 };
+    penyertaan.forEach(function(pn){ if(mkira[pn.medal]!==undefined) mkira[pn.medal]++; });
+    new Chart(document.getElementById("carta-medal"), {
+      type:"bar",
+      data:{ labels:Object.keys(mkira), datasets:[{ label:"Bilangan", data:Object.values(mkira), backgroundColor:["#FFB81C","#888","#CD7F32","#DC3545","#FF8C00","#28A745","#0057B8"], borderRadius:6 }] },
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }
+    });
+
+    // Akan Datang
+    var sekarang = new Date();
+    var akanDatang = pertandingan.filter(function(pt){ return pt.tarikhMula && new Date(pt.tarikhMula) >= sekarang; }).slice(0,5);
+    var badgePt = { "Dalaman":"badge-dalaman","Negeri":"badge-negeri","Kebangsaan":"badge-kebangsaan" };
+    var elAD = document.getElementById("senarai-akan-datang");
+    if (akanDatang.length === 0) {
+      elAD.innerHTML = '<div class="empty-state" style="padding:20px;"><i class="fa-solid fa-calendar-xmark" style="opacity:.3;display:block;font-size:28px;margin-bottom:8px;"></i><p>Tiada pertandingan akan datang.</p></div>';
+    } else {
+      elAD.innerHTML = akanDatang.map(function(pt){
+        var d = new Date(pt.tarikhMula);
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--pks-border);">' +
+          '<div style="min-width:42px;height:42px;background:var(--pks-biru-gelap);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:700;line-height:1.2;">' +
+            '<span style="font-size:16px;">' + d.getDate() + '</span>' +
+            '<span>' + d.toLocaleDateString("ms-MY",{month:"short"}) + '</span>' +
+          '</div>' +
+          '<div style="flex:1;"><div style="font-weight:600;font-size:13px;">' + pt.nama + '</div>' +
+          '<div style="font-size:12px;color:var(--pks-teks-muted);"><i class="fa-solid fa-location-dot"></i> ' + (pt.lokasi||"-") + '</div></div>' +
+          '<span class="badge ' + (badgePt[pt.peringkat]||"") + '">' + pt.peringkat + '</span>' +
+        '</div>';
+      }).join("");
+    }
+
+    // Pencapaian Terbaru
+    var terbaru = penyertaan.slice().reverse().slice(0,10);
+    var medalBadge = { "Emas":"badge-emas","Perak":"badge-perak","Gangsa":"badge-gangsa","Johan":"badge-kebangsaan","Naib Johan":"badge-negeri" };
+    var tbodyT = document.getElementById("tbody-terbaru");
+    if (terbaru.length === 0) {
+      tbodyT.innerHTML = '<tr><td colspan="5"><div class="empty-state"><i class="fa-solid fa-inbox" style="opacity:.3;display:block;font-size:28px;margin-bottom:8px;"></i><p>Tiada rekod penyertaan.</p></div></td></tr>';
+    } else {
+      tbodyT.innerHTML = terbaru.map(function(pn){
+        var p  = peserta.find(function(x){ return x.id===pn.pesertaId; });
+        var pt = pertandingan.find(function(x){ return x.id===pn.pertandinganId; });
+        var j  = jurulatih.find(function(x){ return x.id===pn.jurulatihId; });
+        return '<tr>' +
+          '<td><strong>' + (p&&p.nama||"-") + '</strong></td>' +
+          '<td>' + (pt&&pt.nama||"-") + '</td>' +
+          '<td><span class="badge ' + (badgePt[pt&&pt.peringkat]||"badge-aktif") + '">' + (pt&&pt.peringkat||"-") + '</span></td>' +
+          '<td><span class="badge ' + (medalBadge[pn.medal]||"badge-aktif") + '">' + (pn.medal||"-") + '</span></td>' +
+          '<td>' + (j&&j.nama||"-") + '</td>' +
+        '</tr>';
+      }).join("");
+    }
+  </script>
+</body>
+</html>
